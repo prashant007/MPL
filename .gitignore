@@ -1,4 +1,4 @@
-dist/
+/final/dist/
 *.hi
 *.o
 
