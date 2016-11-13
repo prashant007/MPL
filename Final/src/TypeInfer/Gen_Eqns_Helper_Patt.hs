@@ -20,7 +20,7 @@ genPattEquationsList (t:ts) (nvar:rest) = do
         modify $ \(n,v,c,st) -> (n,nvar,c,st)
         eqns <- genPattEqns t  
         eqnsList <- genPattEquationsList ts rest 
-        return (eqns++eqnsList)   
+        return $ combineEqns (eqns++eqnsList)   
 
 genPattEquationsList patts tthing = error $ "\n" ++ show patts ++ "\n" ++ show tthing
 
@@ -98,9 +98,10 @@ helperPattCons patts (consName,posn) (ftype,nargs) = do
                           = stripFunType renFunType
                   outEqn  = TSimp (TypeVarInt typePattCons,otype)
                   inEqns  = zipWith (\x y -> TSimp (TypeVarInt y,x)) itypes newVars
-                  finEqns = TQuant ([],univVars++newVars)
-                                   (outEqn:(inEqns ++ pattEqns))
-                return [finEqns] 
+                  finEqns = combineEqns 
+                                ((TQuant ([],univVars++newVars) (outEqn:inEqns)):pattEqns)
+                                   --(combineEqns(pattEqns ++ outEqn:inEqns)) 
+                return finEqns 
 
             False -> do 
                 let
@@ -183,7 +184,7 @@ funPattProd (patts,posn) = do
         pattEqns <- genPattEquationsList patts newVars 
         let
           prodEqn = TSimp (TypeVarInt typePattProd,TypeProd (map TypeVarInt newVars,posn))  
-          finEqn  = TQuant ([],newVars) (prodEqn:pattEqns) 
+          finEqn  = TQuant ([],newVars) (combineEqns (prodEqn:pattEqns)) 
         return [finEqn]                      
 -- =========================================================================================
 -- ========================================================================================= 
@@ -208,7 +209,6 @@ insertCtxt (str,ctype) (c:cs)
 
 -- =========================================================================================
 -- ========================================================================================= 
--- **********************check this at some point
 funConstStringPattern :: (String,PosnPair) -> 
                    EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) [TypeEqn] 
 funConstStringPattern (constStr,posn) = do 
@@ -219,7 +219,6 @@ funConstStringPattern (constStr,posn) = do
 
 -- =========================================================================================
 -- ========================================================================================= 
--- **********************check this at some point
 funConstIntPattern :: (Int,PosnPair) -> 
                    EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) [TypeEqn] 
 funConstIntPattern (constStr,posn) = do 
@@ -230,8 +229,6 @@ funConstIntPattern (constStr,posn) = do
 
 -- =========================================================================================
 -- ========================================================================================= 
-
-
 funPattDCare :: PosnPair -> EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) [TypeEqn]
 funPattDCare posn = do  
         return []
@@ -293,49 +290,69 @@ renameFunType funType = do
                 return funType    
 
 
-intTypeToStrType :: FunType -> FunType
+intTypeToStrType :: FunType -> Either ErrorMsg FunType
 intTypeToStrType funType = do 
         case funType of 
             IntFType (uvars,fType) -> do 
-                 let 
-                   uVarsStrs = map (\x -> "T" ++ show x) [0,1..(length uvars-1)]
-                   substList = zip uvars uVarsStrs
-                   newFType  = renameTVarInts substList fType
-                  in 
-                   StrFType (uVarsStrs,newFType)  
+                  let  
+                     uVarsStrs = map (\x -> "T" ++ show x)
+                                     [0,1..(length uvars-1)]
+                     substList = zip uvars uVarsStrs 
+                  case renameTVarInts substList fType of 
+                      Just newFType -> 
+                          return $ StrFType (uVarsStrs,newFType)
+                      Nothing ->
+                         Left $ ". Error renaming ::" ++ show funType     
             otherwise ->
-                 funType  
+                 return funType  
 
-renameTVarInts :: [(Int,String)] -> Type -> Type 
+renameTVarInts :: [(Int,String)] -> Type -> Maybe Type 
 renameTVarInts substList intType
         = case intType of 
               Unit pn -> 
-                  Unit pn 
+                  return $
+                      Unit pn 
 
-              TypeDataType (name,dtypes,posn) ->
-                  TypeDataType (name,map (renameTVarInts substList) dtypes,posn)
+              TypeDataType (name,dtypes,posn) -> do 
+                  mDats <- mapM (renameTVarInts substList) dtypes
+                  return $ 
+                      TypeDataType (name,mDats,posn)
 
-              TypeCodataType (name,dtypes,posn) ->
-                  TypeCodataType (name,map (renameTVarInts substList) dtypes,posn)
+              TypeCodataType (name,dtypes,posn) -> do 
+                  mCoDats <- mapM (renameTVarInts substList) dtypes
+                  return $ 
+                      TypeCodataType (name,mCoDats,posn)
               
-              TypeProd (types,posn) ->
-                  TypeProd (map (renameTVarInts substList) types,posn)  
+              TypeProd (types,posn) -> do 
+                  mProds <- mapM (renameTVarInts substList) types
+                  return $ 
+                      TypeProd (mProds,posn)  
 
               TypeConst (bType,posn) ->
-                  intType
+                  return intType
 
               TypeVar (var,posn) ->
-                  TypeVar (var,posn)
+                  return $ 
+                      TypeVar (var,posn)
 
               TypeVarInt num ->
-                  TypeVar(fromJust $ lookup num substList,(0,0))
+                  case lookup num substList of 
+                      Nothing ->
+                          Nothing
+                      Just sval -> 
+                          return $
+                              TypeVar(sval,(0,0))
 
-              TypeFun (itypes,otype,posn) ->
-                  TypeFun (
-                            map (renameTVarInts substList) itypes,
-                            renameTVarInts substList otype,
-                            posn
-                          )
+
+              TypeFun (itypes,otype,posn) -> do 
+                  miTypes <- mapM (renameTVarInts substList) itypes
+                  moType  <- renameTVarInts substList otype
+                  return $ 
+                      TypeFun (
+                                miTypes,
+                                moType,
+                                posn
+                              )
 
 renameTVar :: [(String,Int)] -> Type -> Type 
 renameTVar substList typeflem   
@@ -372,7 +389,40 @@ renameTVar substList typeflem
                             posn
                           )
                                    
--- =========================================================================================
--- ========================================================================================= 
 
+-- ===================================================================================
+-- ===================================================================================
+combineEqns :: [TypeEqn] -> [TypeEqn]
+combineEqns totEqns
+        = case  noQuantEqns totEqns of 
+              True  ->
+                  totEqns
+              False ->
+                  combineEqnsHelper totEqns ([],[],[])
 
+combineEqnsHelper :: [TypeEqn] -> (UniVars,ExistVars,[TypeEqn]) -> [TypeEqn]
+combineEqnsHelper [] (suv,sev,steqns)
+        = [TQuant (suv,sev) steqns]
+combineEqnsHelper (eqn:eqns) (suv,sev,steqns)  
+        = case eqn of 
+             TSimp simpEqn ->
+                 combineEqnsHelper eqns (suv,sev,(steqns ++ [TSimp simpEqn]))
+             TQuant (uvars,evars) eqlist ->
+                 combineEqnsHelper eqns (suv++uvars,sev++evars,steqns++eqlist) 
+
+-- return True if there is no Quant eqn
+noQuantEqns :: [TypeEqn] -> Bool 
+noQuantEqns eqns 
+        = case (filter isQuantEqn eqns) of 
+              [] -> 
+                  True
+              _  ->
+                  False    
+
+isQuantEqn :: TypeEqn -> Bool
+isQuantEqn eqn 
+        = case eqn of 
+              TQuant _ _ ->
+                  True
+              TSimp _ ->
+                  False   

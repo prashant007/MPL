@@ -99,30 +99,42 @@ instance () => Out (Type)
 instance Show Type where
   show (Unit _) = "Unit" 
   show (TypeVar (x,posn))
-                      = x 
-  show (TypeVarInt n) = "V" ++ show n 
+        = x 
+  show (TypeVarInt n)
+        = show n 
   show (TypeConst (btype,posn))
-                      = printConst btype
+        = printConst btype
   show (TypeDataType (dname,types,posn))
-                      = case length types /= 0 of
-                            True ->
-                               case dname == "List" of 
-                                   True  -> "[" ++ (intercalate ",".map show) types ++
-                                            "]"
-                                   False ->
-                                      dname ++ "(" ++ 
-                                      (intercalate ",".map show) types ++ ")"
-                            False ->
-                               dname   
+        = case length types /= 0 of
+              True ->
+                 case dname == "List" of 
+                     True  -> "[" ++ (intercalate ",".map show) types ++
+                              "]"
+                     False ->
+                        dname ++ "(" ++ 
+                        (intercalate ",".map show) types ++ ")"
+              False ->
+                 dname   
   show (TypeCodataType (cname,types,posn))
-                      = case length types /= 0 of
-                            True ->
-                               cname ++ "(" ++ (intercalate ",".map show) types ++ ")"
-                            False ->
-                               cname 
+        = case length types /= 0 of
+              True ->
+                 case cname == "Exp" of 
+                     True  -> 
+                         "(" ++ show (head types) ++ "=>" 
+                         ++ show (last types) ++ ")"
+                     False ->
+                         cname ++
+                         "(" ++ (intercalate ",".map show) types ++ ")"
+              False ->
+                 cname 
+  
+  show (TypeProd (prods,posn))
+        = "<" ++ intercalate "," (map show prods) ++ ">"
+
+
   show (TypeFun (ins,out,posn))
-                      = "(" ++ (intercalate ", " .map show) ins ++ 
-                         ") -> " ++ show out 
+                      =  (intercalate ", " .map show) ins ++ 
+                         "-> " ++ show out 
 
 
 printConst :: BaseType -> String
@@ -183,7 +195,7 @@ instance () => Out (Pattern)
 
 data Term =  TRecord [(Pattern,Term,PosnPair)]
            | TCallFun (FuncName,[Term],PosnPair)  
-           | TLet    (Term,[Defn],PosnPair)
+           | TLet    (Term,[LetWhere],PosnPair)
            | TVar    (String,PosnPair)
            | TConst  (BaseVal,PosnPair)
            | TIf     (Term,Term,Term,PosnPair)
@@ -195,6 +207,12 @@ data Term =  TRecord [(Pattern,Term,PosnPair)]
            | TProd   ([Term],PosnPair)
            | TDefault PosnPair
           deriving (Eq,Show,Generic)
+
+data LetWhere =   LetDefn Defn 
+                | LetPatt (Pattern,Term)
+                deriving (Eq,Show,Generic)
+
+instance () => Out (LetWhere)
 
 instance () => Out (Term)
 
@@ -281,15 +299,19 @@ data Func =        Add_I
                  | DivQ_I
                  | DivR_I 
                  | Eq_I
-                 | Leq_I 
+                 | Neq_I
+                 | Leq_I
+                 | Geq_I 
+                 | LT_I
+                 | GT_I
                  | Eq_C
-                 | Leq_C
                  | Eq_S
-                 | Leq_S
                  | Concat_S  
                  | Unstring_S 
                  | HeadString_S
                  | TailString_S
+                 | Or_B
+                 | And_B
                  deriving  (Eq,Show,Read,Generic)
 
 instance () => Out (Func)
@@ -314,8 +336,8 @@ type TypeThing = Int
 zigStyle :: Style
 zigStyle = Style {mode = PageMode, lineLength = 90, ribbonsPerLine = 1.1}
 
-equalS = "========================================================"
-stars  = "*********************************************************"
+equalS = replicate 90 '='
+stars  = replicate 90 '*'
 
 getParamVars :: Type -> [String]
 getParamVars typeP = nub (getTypeVars typeP)
@@ -365,3 +387,6 @@ freeVars texpr
                    nub $ concat $ map freeVars types   
               otherwise ->
                    []   
+
+printPosn :: PosnPair -> String
+printPosn (line,col) = " at line,column (" ++ show line ++ "," ++ show col ++ ")"

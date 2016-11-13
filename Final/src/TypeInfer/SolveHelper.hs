@@ -109,6 +109,8 @@ combine_packages (((fl1,fr1),u1,e1,s1):((fl2,fr2),u2,e2,s2):rest)
 
       snew =  s2 ++ s1
 
+combine_packages sthg = error $ show sthg 
+
 -- ===========================================================================
 -- ===========================================================================
 
@@ -212,10 +214,9 @@ getRight eith
 reduce_Package :: Package -> Either ErrorMsg Package 
 -- final free vars is always collected during the base case of 
 -- commonElems == []. In other cases , it doesn't matter.
-reduce_Package (_,uvars,evarsRe,slistRe) = do  
+reduce_Package (dcareFVars,uvars,evars,slistRe) = do  
         let
-          (evars,newSubstList)
-                    = check_Reciproc evarsRe slistRe
+          newSubstList= remove_Reciproc slistRe
           -- see if there are some common element between
           -- newSubsVars and evars
           dupnewSubsVars
@@ -225,17 +226,23 @@ reduce_Package (_,uvars,evarsRe,slistRe) = do
           remEvars    = evars \\ commonElems  
         case commonElems == [] of
             True -> do 
-                let 
-                  totEUVars= uvars ++ evars 
-                  nFrvars  = (nub.concat.map (freeVars.snd)) newSubstList 
-                  intUVars = newSubsVars\\totEUVars
-                  intEVars = nFrvars\\totEUVars                        
-                  newPackage
-                           = (
-                               (intUVars,intEVars),uvars,evars,
-                               nub newSubstList 
-                             )
-                return newPackage
+              case uvars == [] of 
+                  True -> do 
+                      let 
+                        totEUVars= uvars ++ evars 
+                        nFrvars  = (nub.concat.map (freeVars.snd)) newSubstList 
+                        intUVars = newSubsVars\\totEUVars
+                        intEVars = nFrvars\\totEUVars                        
+                        newPackage
+                                 = (
+                                     (intUVars,intEVars),uvars,evars,
+                                     nub newSubstList 
+                                   )
+                      return newPackage
+
+                  False -> 
+                      handle_UVars (dcareFVars,uvars,evars,slistRe)
+
             False -> do      
                 -- find out substitution corresponding to the common elems
                 -- common subs are the subs corresponding to the evars.
@@ -244,6 +251,51 @@ reduce_Package (_,uvars,evarsRe,slistRe) = do
                                   ([],[]),uvars,remEvars,
                                   nub finSubstList
                                 ) 
+
+-- ==========================================================================
+-- ==========================================================================
+
+                                 
+handle_UVars :: Package ->  Either ErrorMsg Package
+handle_UVars (freeVars,uvars,evars,substList) 
+        = case uvars == [] of 
+              True  ->  
+                   reduce_Package (([],[]),[],evars,substList)
+  
+              False -> do 
+                  let 
+                    (u:us)   = uvars 
+                    uvarsmsg = "Inferred type and given types don't match"
+                  case lookup u substList of
+                      Just texpr -> 
+                          case texpr of 
+                              TypeVarInt v ->
+                                  case u == v of
+                                      True -> do 
+                                          let 
+                                            newList 
+                                              = (delete (u,TypeVarInt u) substList)
+                                            newPack 
+                                              = (([],[]),us,evars,newList)
+                                          handle_UVars newPack
+                                      False -> 
+                                          case elem v evars of 
+                                              True  -> do 
+                                                  let 
+                                                    newSList
+                                                        = (v,TypeVarInt u):
+                                                          (delete (u,TypeVarInt v) substList)
+                                                    newPack
+                                                        = (([],[]),uvars,evars,newSList)      
+                                                  reduce_Package newPack          
+      
+                                                  
+                                              False ->
+                                                  Left uvarsmsg
+                              otherwise ->
+                                  Left uvarsmsg
+                      Nothing -> 
+                           handle_UVars (([],[]),us,evars,substList) 
 
 -- ==========================================================================
 -- ==========================================================================
@@ -268,19 +320,6 @@ commonSubsFun slist (e:es) = do
             Nothing -> 
                 Left $ "Can't Find existential variable <<" ++ show e ++ ">> in \n" ++
                        show slist                
-
-someList :: SubstList
-someList = [
-             (7,TypeVarInt 3),
-             (8,TypeVarInt 4),
-             (9,TypeVarInt 6),
-             (10,TypeVarInt 7),
-             (11,TypeVarInt 8),
-             (12,TypeVarInt 9),
-             (6,TypeVarInt 12),
-             (4,TypeVarInt 11),
-             (3,TypeVarInt 10)
-           ]
 
 -- ==========================================================================
 -- ==========================================================================
@@ -315,19 +354,14 @@ handle_Evars (e:es) packs (shuntEvar,slist) = do
         let 
           (newSEVars,newSList) 
                      = check_Reciproc shuntEvar slist
-          eithMayVal = check_package e packs []  
-        case eithMayVal of
-              Right mayVal -> 
-                  case mayVal of 
-                      Just (maySubst,newPacks) ->
-                          case maySubst of 
-                              Just subst -> 
-                                  handle_Evars es newPacks (newSEVars,subst:newSList)
-                              Nothing ->
-                                  handle_Evars es newPacks (e:newSEVars,newSList)    
-
+          eithVal = check_package e packs []  
+        case eithVal of
+              Right (maySubst,newPacks) -> 
+                  case maySubst of 
+                      Just subst ->                               
+                          handle_Evars es newPacks (newSEVars,subst:newSList)
                       Nothing -> 
-                          handle_Evars es packs (e:newSEVars,newSList) 
+                          handle_Evars es newPacks (e:newSEVars,newSList) 
               Left errormsg ->
                   Left errormsg           
       
@@ -341,30 +375,31 @@ handle_Evars (e:es) packs (shuntEvar,slist) = do
 -- is changed by removing that substitution). If it is not present in any 
 -- substitution then simply return Nothing
 check_package :: ExistVar -> [Package] ->  [Package] ->
-                 Either ErrorMsg (Maybe (Maybe Subst,[Package]))
+                 Either ErrorMsg (Maybe Subst,[Package])
                  
 check_package evar [] shunt_packs
-        = Right Nothing 
+        = Right (Nothing,shunt_packs) 
 
 check_package evar (p:ps) shunt_packs = do           
         let ((flvars,frvars),uvars,evars,substlist) = p
         case elem evar flvars of 
               True  -> 
-                  case lookup evar substlist of 
+                  case myLookup evar substlist evars of 
                       Just texpr -> do 
                            case TypeVarInt evar /= texpr of 
                                True -> do  
-                                   let
-                                     subs  = (evar,texpr) 
-                                     newSList
-                                           = delete subs substlist        
-                                     newFrVars 
-                                           = getNewFreeVars newSList     
-                                     newPackageP
-                                           = (newFrVars,uvars,evars,newSList) 
-                                   return$ Just ( Just subs,
-                                                 (shunt_packs++(newPackageP:ps))
-                                                )
+                                         let
+                                           subs  = (evar,texpr) 
+                                           newSList
+                                                 = delete subs substlist        
+                                           newFrVars 
+                                                 = getNewFreeVars newSList     
+                                           newPackageP
+                                                 = (newFrVars,uvars,evars,newSList) 
+                                         return$ ( Just subs,
+                                                       (shunt_packs++(newPackageP:ps))
+                                                 )
+ 
                                -- stopping evars to be removed because of (TvarInt 5,TvarInt5)    
                                False -> do 
                                     let 
@@ -374,18 +409,28 @@ check_package evar (p:ps) shunt_packs = do
                                       newFlvars = delete evar flvars
                                       newFrvars = delete evar frvars 
                                       newPack   = ((newFlvars,newFrvars),uvars,evars,newSList)
-                                    return $ Just (Nothing, (shunt_packs ++ (newPack:ps)))   
+                                    check_package evar ps (newPack:shunt_packs)   
 
                       Nothing -> do 
-                           let 
-                             newFlvars = delete evar flvars
-                             newFrvars = delete evar frvars 
-                             newPack   = ((newFlvars,newFrvars),uvars,evars,substlist)
-                           return $ Just (Nothing, (shunt_packs ++ (newPack:ps)))
+                          check_package evar ps (p:shunt_packs)
               False ->   
                   check_package evar ps (p:shunt_packs)
         
 
 -- ===========================================================================
 -- ===========================================================================
+
+-- This Function is a normal lookup function plus the condition that 
+myLookup :: ExistVar -> SubstList -> ExistVars -> Maybe Type 
+myLookup e slist evars 
+        = case lookup e slist of 
+              Nothing   -> 
+                  Nothing
+              Just expr -> 
+                  case intersect (freeVars expr) evars /= [] of 
+                      True -> 
+                          myLookup e (delete (e,expr) slist) evars 
+                      False ->
+                          Just expr     
+
 

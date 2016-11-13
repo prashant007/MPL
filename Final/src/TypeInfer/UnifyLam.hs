@@ -34,6 +34,8 @@ doOccursCheck (te1,TypeVarInt x)
                   (and.map (\e -> doOccursCheck (e,TypeVarInt x))) dins
               TypeCodataType (dname,dins,dposn) ->
                   (and.map (\e -> doOccursCheck (e,TypeVarInt x))) dins
+              TypeProd (prods,posn) ->
+                  (and.map (\e -> doOccursCheck (e,TypeVarInt x))) prods    
               otherwise ->
                   True 
                      
@@ -84,8 +86,8 @@ matchStructure (texpr1,texpr2)
                            return $ zip dins1 dins2
                        False -> do 
                            let 
-                             emsg = "Can't Unify different data types. <<"
-                                    ++ dname1 ++ ">> with <<" ++  dname2 ++ ">>"
+                             emsg = "\nExpected data type <<"
+                                    ++ dname1 ++ ">> instead got <<" ++  dname2 ++ ">> "
                            Left emsg  
 
               (TypeCodataType (cname1,dins1,dposn1),TypeCodataType (cname2,dins2,dposn2)) ->
@@ -94,8 +96,22 @@ matchStructure (texpr1,texpr2)
                            return $ zip dins1 dins2
                        False -> do 
                            let 
-                             emsg = "Can't Unify different codata types. <<"
-                                    ++ cname1 ++ ">> with <<" ++  cname2 ++ ">>"
+                             emsg = "\nExpected codata type "
+                                    ++ cname1 ++ ">> instead got <<" ++  cname2 ++ ">>" 
+                           Left emsg  
+
+              (TypeProd (prods1,posn1),TypeProd (prods2,posn2)) -> do 
+                   let 
+                     len1 = length prods1
+                     len2 = length prods2
+                   case len1 == len2 of 
+                       True  -> do 
+                           return $ zip prods1 prods2
+                       False -> do 
+                           let 
+                             emsg = "Expecting a tuple of length <<" ++ show len1 ++
+                                    ">> instead got one with length <<" ++ 
+                                     show len2 ++ ">>" 
                            Left emsg  
 
               (TypeConst (bt1,posn1),TypeConst (bt2,posn2)) ->
@@ -104,16 +120,37 @@ matchStructure (texpr1,texpr2)
                            return [] 
                        False -> do
                            let 
-                             emsg = "Can't Unify different base types <<"
-                                    ++ show bt1 ++ ">> with <<" 
+                             emsg = "Expecting the base types <<"
+                                    ++ show bt1 ++ ">> instead got <<" 
                                     ++ show bt2 ++ ">>" 
                            Left emsg          
 
               otherwise -> do 
                   let 
-                    emsg = "Can't Unify  types <<"
-                           ++ show texpr1 ++ ">> with <<" ++ show texpr2 ++ ">>"
+                    emsg = "\nExpecting the type <<" ++ printType texpr1
+                            ++ ">> instead got the type <<" ++ printType texpr2 ++ ">>"
                   Left emsg    
+
+
+printType :: Type -> String 
+printType sType = 
+        case sType of
+            Unit pn -> 
+                "UNIT " 
+            TypeDataType (dname,_,pn) -> 
+                "DATA TYPE " ++ show dname 
+            TypeCodataType (cdname,_,pn) ->
+                "CODATA TYPE " ++ show cdname 
+            TypeProd (_,pn) ->
+                 "TUPLE " 
+            TypeConst (btype,pn) ->
+                 printConst btype 
+            TypeVar (str,pn) ->
+                 "VARIABLE "
+            TypeVarInt _ -> 
+                 "VARIABLE " 
+            TypeFun (_,_,pn) ->
+                 "FUN TYPE " 
 
 
 coalesce ::  (Subst,SubstList) -> Either ErrorMsg SubstList
@@ -181,9 +218,15 @@ substInTExpr (x,t) texpr
                         dposn
                       )
 
+              TypeProd (prods,pposn) -> 
+                  TypeProd 
+                     (
+                      map (substInTExpr (x,t)) prods ,
+                      pposn
+                     )
+
               otherwise ->
                   texpr 
-
 
 linearize_Cust :: SubstList -> ExistVars -> Either ErrorMsg (ExistVars,SubstList)
 linearize_Cust [] evars
@@ -195,10 +238,14 @@ linearize_Cust (s:ss) evars = do
         (finEvars,intmt2) <- linearize_Cust intmt11 newEvars
         return $ (finEvars,(s:intmt2)) 
 
+
 -- =============================================================
 -- =============================================================
 -- checking for things like (2,TVarInt 4) and (4,TVarInt 2)
--- this is wrong
+
+remove_Reciproc :: SubstList -> SubstList
+remove_Reciproc slist = snd (check_Reciproc [] slist)
+
 check_Reciproc :: ExistVars -> SubstList -> (ExistVars,SubstList)
 check_Reciproc evars slist
         = (nub finEvars,nub $ finSimp++notsimp)

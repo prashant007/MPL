@@ -9,11 +9,25 @@ data Tree (A) -> C = Leaf  :: A  -> C
 data Rose (A) -> C =  RVar :: A -> C 
                       RS   :: List(C) -> C  
 
+data Bool -> C = True  :: ->  C
+                 False :: -> C
+
 data Pair (A,B) -> C = Pair :: A,B -> C 
+
+
+fun zipfun :: List(A),List(B) -> List (<B,A>) = 
+    []    ,[]      -> []
+    (x:xs),(y:ys)  -> (<x,y>:zipfun (xs,ys)) 
+
+
+fun last2Elms  = 
+    x:y:z:[] -> <x,y,z>
+    (z:xs)   -> last2Elms (xs)   
+
 
 fun append = 
      []   , ys     -> ys 
-     (x:xs), ys    -> (x:(append (xs,ys))) 
+     (x:xs), ys    -> x:append (xs,ys) 
 
 fun flattenTree =
     t -> fold t of 
@@ -30,11 +44,16 @@ fun pattTerms1 =
     [x],y -> [x]
     a  ,b -> b 
 
-fun zipfun = 
-    []    ,[]     -> []
-    (x:xs),(y:ys) -> Cons (Pair (x,y),zipfun (xs,ys)) 
 
 fun reverse =
      l -> case l of 
-              []     -> []
-              (x:xs) -> append (reverse (xs),[x])
+              []      -> []
+              (x:xs)  -> append (reverse (xs),[x])
+
+fun someRandom =
+      []     ,[]    -> []
+      (x:xs),(y:ys) -> 
+           switch 
+              True  = xs
+              False = ys 
+

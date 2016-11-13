@@ -47,3 +47,5 @@ data ValRet =     ValRet_Cons   ((DataName,[Name]),FunType,(FunType,FunType),Num
                 | ValRet_Fun    (FunType,NumArgs)
                 | ValRet_Proc   (Maybe ProcessType,(NumArgs,NumArgs,NumArgs))
                deriving (Eq,Show) 
+
+

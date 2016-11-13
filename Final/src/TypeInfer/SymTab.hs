@@ -58,8 +58,8 @@ lookup_ST val symTab = do
 lookup_Cons :: (Name,PosnPair) -> [SymbolDefn] -> Either ErrorMsg ValRet
 lookup_Cons (name,posn) datas = do 
         let 
-          emsg = "No data defintion found for constructor/destructor <<"
-                 ++ show name  ++ ">> defined" ++ printPosn posn 
+          emsg = "No data defintion found for constructor <<"
+                 ++ show name  ++ ">> used" ++ printPosn posn 
 
         case datas /= [] of 
             True  -> do
@@ -81,8 +81,8 @@ lookup_Cons (name,posn) datas = do
 lookup_Dest :: (Name,PosnPair) -> [SymbolDefn] -> Either ErrorMsg ValRet
 lookup_Dest (name,posn) codatas = do 
         let 
-          emsg = "No codata defintion found for constructor/destructor <<"
-                 ++ show name  ++ ">> defined" ++ printPosn posn 
+          emsg = "No codata defintion found for destructor <<"
+                 ++ show name  ++ ">> used" ++ printPosn posn 
 
         case codatas /= [] of 
             True  -> do
@@ -259,9 +259,6 @@ update_ST_List (d:ds) symTab = do
 -- =====================================================================================
 -- =====================================================================================
 
-
-printPosn :: PosnPair -> String
-printPosn (line,col) = "at line,column (" ++ show line ++ "," ++ show col ++ ")"
 
 genNewVar :: EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) Int 
 genNewVar = do

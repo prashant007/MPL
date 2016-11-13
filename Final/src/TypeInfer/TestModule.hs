@@ -5,6 +5,7 @@ import TypeInfer.SolveEqns
 import TypeInfer.MPL_AST
 import TypeInfer.SymTab
 import TypeInfer.SymTabDataType
+import TypeInfer.InitSymTab
 
 import Control.Monad.Trans.Either
 import Control.Monad.State.Lazy 
@@ -17,7 +18,7 @@ testFunction :: MPL -> IO ()
 testFunction mplstmts = do 
     let 
       stEith  = runEitherT (takeCareofMPL mplstmts) 
-      eithVal = evalState stEith (1,0,[],[])    
+      eithVal = evalState stEith (1,0,[],toBeginSymTab)    
     case eithVal of 
         Left emsg -> 
             putStrLn $ unlines
@@ -156,10 +157,10 @@ takeCareofStmt stmt
                         let 
                           funDefns= getallFuns defns
                           remDefns= defns \\ funDefns
-                          lDefns  = length funDefns
-                          newVars = [0..(lDefns-1)]
-                        modify $ \(n,tt,c,st) -> (lDefns,-1,[],newSTStmts)  
-                        quadFDefn   <- takeCareofFunDefns funDefns newVars
+                          --lDefns  = length funDefns
+                          --newVars = [0..(lDefns-1)]
+                        modify $ \(n,tt,c,st) -> (1,0,[],newSTStmts)  
+                        quadFDefn   <- takeCareofFunDefns funDefns 
                         modify $ \(n,tt,c,st) -> (1,0,[],symTab)                      
                         quadRestDefn <- takeCareofDefns remDefns 
                         let 

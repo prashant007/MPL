@@ -7,7 +7,7 @@ import TypeInfer.MPL_AST
 import TypeInfer.TestModule
 import ErrM
 import PtreeToAST
-
+import TypeInfer.SolveEqns
 import TypeInfer.SolveHelper
 import TypeInfer.UnifyLam
 import TypeInfer.SymTabInsert
@@ -16,6 +16,8 @@ import System.Environment
 import Control.Monad.Trans.State.Lazy
 import Text.PrettyPrint
 import Text.PrettyPrint.GenericPretty
+import Control.Monad.Trans.Either
+
 
 
 myLLexerMPL = resolveLayout True .myLexer
@@ -39,5 +41,15 @@ main = do
             Bad s -> do 
                 putStrLn $ "Error in Parsing \n" ++ show  s     
 
+myPack :: Package
+myPack = 
+  (
+    ([],[]),
+    [1],
+    [],
+   [
+    (1,TypeDataType ("Tree", [TypeVarInt 1], (21, 17)))
+   ]
+  ) 
 
 

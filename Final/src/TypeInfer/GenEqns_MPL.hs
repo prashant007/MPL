@@ -43,7 +43,7 @@ genEquationsList a b = error $ "The error is :" ++ show a ++ "\n" ++ show b
 
 foldTerm :: ([(Pattern,Term,PosnPair)] -> b) ->
             ((FuncName,[Term],PosnPair) -> b) -> 
-            ((Term,[Defn],PosnPair) -> b) ->
+            ((Term,[LetWhere],PosnPair) -> b) ->
             ((String,PosnPair) -> b) ->
             ((BaseVal,PosnPair) -> b) ->
             ((Term,Term,Term,PosnPair) -> b) ->
@@ -66,12 +66,12 @@ foldTerm frecord fcallFun flet fvar fconst fif fcase
          TCallFun(fname,terms,posn) ->  
              fcallFun (fname,terms,posn)
 
-         TLet(term,defns,posn) ->
-             flet (term,defns,posn)
+         TLet(term,letwhrs,posn) ->
+             flet (term,letwhrs,posn)
 
          TVar(str,posn) ->   
              fvar (str,posn)
-         --(String,posn)
+
          TConst(bval,posn) ->
              fconst (bval,posn)
 
@@ -292,8 +292,6 @@ remove_ValRet_Fun (ValRet_Fun (ftype,nargs)) = do
               = stripFunType renFType
         return (uVars,itypes,otype,nargs)
 
-
-
 -- =========================================================================================
 -- ========================================================================================= 
 {-
@@ -301,35 +299,87 @@ Put all the defns (here the defns are function defns) in a new scope in the symb
 then type infer the term.Once that is done restore the symbol table to the original.
 -}
 
-fun_Let :: (Term,[Defn],PosnPair) ->
+fun_Let :: (Term,[LetWhere],PosnPair) ->
            EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) [TypeEqn]
 
-fun_Let (term,defns,posn) = do 
-        (_,typeLet,context,symTab) <- get 
-        -- I am expecting all the fun defns to have types assigned to them
-        quadDefnList  <- takeCareofDefns defns 
+fun_Let (term,letwhrs,posn) = do 
+        (initNum,typeLet,context,symTab) <- get 
+        modify $ \(n,tt,c,st) -> (1,0,[],symTab)
         let 
-          newDefns  = concat $ map (\(a,b,c) -> a) quadDefnList
+          ldefns    = filter isLetDefn letwhrs
+          lremPatts = letwhrs \\ ldefns
+          defns     = map removeLetDefn ldefns
+          remPatts  = map removeLetPatt lremPatts 
+        quadDefnList  <- takeCareofFunDefns defns 
+        let 
+          newDefns  = (\(a,b,c) -> a) quadDefnList
           newSymTab = insert_ST newDefns symTab NewScope
-        modify $ \(n,tt,c,st) -> (n,tt,context,newSymTab)
-        termEqns  <- genEquations term
+        -- patt,Terms will be evaluated in the old context and
+        -- new symtab.once their evaluation is done the symtab it
+        -- took in is returned alogn with an updated context in which
+        -- the term part of the let is evaluated.   
+        modify $ \(n,tt,c,st) -> (initNum,typeLet,context,newSymTab)
+        thngList <- genNewVarList (length remPatts)
+        pattEqns <- letPattTermEqns remPatts thngList
+        termEqns <- genEquationsList [term] [typeLet]
         modify $ \(n,tt,c,st) -> (n,tt,context,symTab)
-        return termEqns
+        let finEqn = TQuant ([],thngList) (combineEqns (pattEqns ++ termEqns))
+        return [finEqn]
 
+
+isLetDefn :: LetWhere -> Bool
+isLetDefn ld = case ld of 
+    LetDefn _ -> True
+    otherwise -> False 
+
+removeLetDefn :: LetWhere -> Defn 
+removeLetDefn (LetDefn d) = d 
+
+removeLetPatt :: LetWhere -> (Pattern,Term)
+removeLetPatt (LetPatt (p,t)) = (p,t)
+
+
+letPattTermEqns :: [(Pattern,Term)] -> [TypeThing] -> 
+                   EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) [TypeEqn] 
+letPattTermEqns [] [] 
+        = return [] 
+letPattTermEqns ((patt,term):rest) (typeThing:ts) = do 
+        (_,_,context,symTab) <- get
+        pattEqns <- genPattEquationsList [patt] [typeThing]
+        termEqns <- genEquationsList [term] [typeThing]
+        remEqns  <- letPattTermEqns rest ts 
+        return (pattEqns ++ termEqns ++ remEqns)
+
+
+
+getAllFunNames :: [Defn] -> [FuncName]
+getAllFunNames defns = map getDefnName defns 
+
+getDefnName :: Defn -> FuncName 
+getDefnName (FunctionDefn (fn,_,_,_)) = fn 
 
 {-This is the function for the mutual case-}
-takeCareofFunDefns :: [Defn] -> [TypeThing] ->
+takeCareofFunDefns :: [Defn] -> 
                    EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) 
                                     ([Defn],(Log,Package),[TypeEqn])
-takeCareofFunDefns defns typeThings = do 
-        skelVars <- assignSkelTypes defns
-        allEqns  <- genFunDefnListEqns defns typeThings         
+takeCareofFunDefns []    = do 
+         let 
+           empPack = (([],[]),[],[],[])
+         return ([],([],empPack),[])
+
+takeCareofFunDefns defns = do
+        (startNum,_,_,_) <- get  
+        typeThings <- genNewVarList (length defns)
+        skelVars   <- assignSkelTypes defns
+        allEqns    <- genFunDefnListEqns defns typeThings         
         let 
           finEqns = combineEqns allEqns
           solEqn  = solveEqns finEqns
         case solEqn of
             Left errormsg -> do 
-                left $ "Error in mutual functions ::" ++ errormsg
+                left $ "Error in mutual functions \n\n" ++
+                       intercalate "," (map show (getAllFunNames defns))
+                       ++"\n" ++ errormsg
 
             Right logpack -> do 
                  let 
@@ -337,19 +387,37 @@ takeCareofFunDefns defns typeThings = do
                             = logpack 
                     (fvars,uvars,evars,subsList)
                             = package    
-                    finDefns= mkNewDefnsMut defns 0 subsList []                       
-                 return (finDefns,logpack,finEqns)
+                 case mkNewDefnsMut defns startNum subsList [] of 
+                     Left errormsg  ->
+                         left $ errormsg ++ "\n" ++ show package
+                     Right finDefns ->
+                         return (finDefns,logpack,finEqns)                 
+                 
 
-mkNewDefnsMut :: [Defn] -> Int -> SubstList -> [Defn] -> [Defn]
-mkNewDefnsMut [] _ _ finDefns = reverse finDefns
-mkNewDefnsMut ((FunctionDefn (fn,ftype,fnlist,pn)):ds) num sList shDefn
-        = mkNewDefnsMut ds (num+1) sList (newDefn:shDefn)
-    where
-      newFType = (fromJust.lookup num) sList
-      fvars    = freeVars newFType
-      funType  = IntFType (fvars,newFType)
-      fnStrType= intTypeToStrType funType
-      newDefn  = FunctionDefn (fn,fnStrType,fnlist,pn)
+mkNewDefnsMut :: [Defn] -> Int -> SubstList -> [Defn] ->
+                 Either ErrorMsg [Defn]
+mkNewDefnsMut [] _ _ finDefns = do 
+      return (reverse finDefns)
+mkNewDefnsMut ((FunctionDefn (fn,ftype,fnlist,pn)):ds) num sList shDefn = do 
+      let   
+        newFType = (fromJust.lookup num) sList
+      case lookup num sList of 
+          Just newFType -> do 
+              let
+                fvars    = freeVars newFType
+                funType  = IntFType (fvars,newFType)
+              case intTypeToStrType funType of 
+                  Left  errormsg  -> do 
+                      Left errormsg
+                  Right fnStrType -> do 
+                      let 
+                        newDefn  = FunctionDefn (fn,fnStrType,fnlist,pn)
+                      mkNewDefnsMut ds (num+1) sList (newDefn:shDefn)
+          Nothing ->  Left $ 
+                           "Can't find a name for function " ++ show fn ++ "from \n"
+                           ++ show sList ++ "\n" ++ show num 
+
+
 
 
 takeCareofFunDefn :: Defn ->
@@ -369,7 +437,7 @@ takeCareofFunDefn defn@(FunctionDefn (fname,mfunType,pattTermList,posn)) = do
                                        show fname, ">> defined ",
                                        printPosn posn, "\n", errormsg 
                                       ] 
-                            left $ concat emsg ++ "\n" ++ (prettyStyle zigStyle funEqns)
+                            left $ concat emsg 
 
                         Right logpack -> do 
                              (_,_,_,symTab) <- get  
@@ -379,18 +447,56 @@ takeCareofFunDefn defn@(FunctionDefn (fname,mfunType,pattTermList,posn)) = do
                                 (fvars,uvars,evars,subsList)
                                          = package                          
                                 funType  = IntFType (evars,(snd.head) subsList)
-                                fnStrType= intTypeToStrType funType
-                                newDefn  = FunctionDefn (fname,fnStrType,pattTermList,posn)
-                             modify $ \(n,tt,c,st) -> (1,0,[],st)
-                             return ([newDefn],logpack,funEqns)
+                             case intTypeToStrType funType of 
+                                 Left  iemsg ->
+                                     left $ 
+                                       unlines 
+                                       [
+                                        "Error renaming function name " ++ show fname,
+                                        iemsg,intercalate "\n" log,
+                                        prettyStyle zigStyle funEqns
+                                       ]  
+
+                                 Right fnStrType -> do 
+                                     let 
+                                       newDefn = FunctionDefn (fname,fnStrType,pattTermList,posn)
+                                     modify $ \(n,tt,c,st) -> (1,0,[],st)
+                                     return ([newDefn],logpack,funEqns)
  
                 otherwise -> 
                     case solEqn of
                         Left errormsg -> do 
                             let
-                               emsg = "\n Given and inferred types don't match for function <<" ++
-                                       show fname ++ ">> \n" ++ errormsg 
-                            left emsg
+                              emsg = "\n" ++ "Type Mistmatch : In function <<" ++
+                                      show fname ++ ">> defined" ++ printPosn posn
+                                      ++ "\n\n" ++ errormsg   
+                              errDefn 
+                                   = FunctionDefn (fname,NoType,pattTermList,posn)
+                            errEqns <- genFunDefnEqns errDefn "norm" []
+                            case solveEqns errEqns of 
+                                Left _ ->
+                                    left emsg
+
+                                Right logpack -> do 
+                                    let 
+                                      (log,package)
+                                               = logpack 
+                                      (fvars,uvars,evars,subsList)
+                                               = package                          
+                                      funType  = IntFType (evars,(snd.head) subsList)
+                                    case intTypeToStrType funType of 
+                                        Left  erremsg   ->
+                                            left $ 
+                                               unlines [errormsg,erremsg]
+
+                                        Right fnStrType -> do   
+                                            left $ 
+                                               concat
+                                                [
+                                                 emsg,"\n",
+                                                 "Expected Type :: " ++ show fnStrType,"\n",
+                                                 "Given Type    :: " ++ show mfunType
+                                                ]      
 
                         Right logpack -> do  
                              return ([defn],logpack,funEqns)
@@ -592,19 +698,22 @@ fun_Case :: (Term,[PatternTermPhr],PosnPair) ->
             EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) [TypeEqn]
 fun_Case (term,patttermphrs,posn) = do
         (_,typeCase,context,symTab) <- get     
-        typeTerm <- genNewVar
+        [typeTerm,typeLeft,typeRight] <- genNewVarList 3
         termEqns <- genEquationsList [term] [typeTerm]
-        pattEqns <- getPattListCase patttermphrs (typeTerm,typeCase)
+        pattEqns <- getPattListCase patttermphrs (typeLeft,typeRight)
         let 
-          finEqn = TQuant ([],[typeTerm]) (termEqns ++ pattEqns)
+          leftEqn = TSimp (TypeVarInt typeLeft,TypeVarInt typeTerm)
+          rightEqn= TSimp (TypeVarInt typeCase,TypeVarInt typeRight)
+          finEqn  = TQuant ([],[typeTerm,typeRight,typeLeft])
+                           ([leftEqn,rightEqn] ++ (termEqns++ pattEqns))
         return [finEqn]
 
 
 getPattListCase :: [PatternTermPhr] -> (TypeThing,TypeThing) ->
                    EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) [TypeEqn]
-getPattListCase pattTerms (typeinp,typeOut) = do 
+getPattListCase pattTerms (typeLeft,typeRight) = do 
             (_,_,context,symTab) <- get
-            totEqn <- helperPattTermCase pattTerms (typeinp,typeOut)
+            totEqn <- helperPattTermCase pattTerms (typeLeft,typeRight)
             return totEqn
 
 checkAllConses :: [PatternTermPhr] -> Either ErrorMsg Bool 
@@ -628,19 +737,9 @@ helperPattTermCase :: [PatternTermPhr] -> (TypeThing,TypeThing) ->
 helperPattTermCase [] _ 
         = return []
 helperPattTermCase (p:ps) (typeinp,typeout) = do 
-        --[newIn,newOut] <- genNewVarList 2 
-        let 
-          --eqIn  
-          --    = TSimp (TypeVarInt newIn,TypeVarInt typeinp)
-          --eqOut 
-          --    = TSimp (TypeVarInt newOut,TypeVarInt typeout) 
         pEqns  <- genEqnsPattTermCaseType p [typeinp,typeout]
-        let 
-          --combEqns = TQuant ([],[newIn,newOut])
-          --                  (combineEqns ([eqIn,eqOut] ++ pEqns))
-
         psEqns <- helperPattTermCase ps (typeinp,typeout)
-        return (pEqns++psEqns)
+        return $ (pEqns++psEqns)
 
 genEqnsPattTermCaseType :: PatternTermPhr -> [TypeThing] -> 
                            EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) [TypeEqn]
@@ -759,13 +858,14 @@ genPattTermListFunc pattTerms (fname,fposn,fType) = do
                     IntFType _ -> do 
                         let
                           (intFUVars,inTypes,outType,sposn)
-                                  = stripFunType fType
+                              = stripFunType fType
                           newFunType
                               = TypeFun (inTypes,outType,sposn) 
                           newTotEqn 
                               = TQuant (intFUVars,[typeFunDefn])
                                        ([totEqn,TSimp (TypeVarInt typeFunDefn,newFunType)])
                         return [newTotEqn]
+                      
                     otherwise ->
                         return [totEqn]
 
@@ -782,7 +882,7 @@ genEqnsPattTermFunType ((patts,eithTerm),posn) (varsLeft,varRight) = do
                 modify $ \(n,tt,c,st) -> (n,tt,context,symTab) 
                 let 
                   totEqns = pattEqns ++ termEqns
-                return totEqns
+                return $ combineEqns totEqns
 
             Right termPairList -> do
                 -- this will be the final equation to return
@@ -803,8 +903,7 @@ helperEqnsPattern (skelVars,nVars) (fstPattTerm:restPatts) = do
                    = zipWith (\x y -> TSimp (TypeVarInt y,TypeVarInt x)) skelVars pattVars
         eqnsNonEquality <- genEqnsPattTermFunType fstPattTerm (tail pattVars,head pattVars)
         let 
-          fstPattEqns = TQuant ([],pattVars)
-                               (combineEqns (eqnsEquality ++ eqnsNonEquality)) 
+          fstPattEqns = TQuant ([],pattVars) (eqnsEquality ++ eqnsNonEquality)
         remPattEqns <- helperEqnsPattern (skelVars,nVars) restPatts 
         return $ fstPattEqns:remPattEqns
 
@@ -888,9 +987,6 @@ handle_FoldPatt (name,patts,term,posn) foldT  = do
         return [finEqn]
 
 
-
-
-
 -- check whether all constructors are present 
 -- first is the list of all constructor in the fold , second is the list of all constructors
 checkConses :: [(Name,PosnPair)] -> [Name] -> Name -> SymbolTable -> Either ErrorMsg Bool 
@@ -947,6 +1043,7 @@ fun_Unfold ::(Term,FoldPattern,PosnPair) ->
              EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) [TypeEqn]
 fun_Unfold (term,foldPatt,posn) = undefined      
 
+
 -- ===================================================================================
 -- ===================================================================================
 fun_Cons ::(Name,[Term],PosnPair) ->
@@ -967,7 +1064,7 @@ fun_Cons (consName,terms,posn) = do
                         termEqns   <- genEquationsList terms newVars
                         let 
                           (univVars,itypes,otype,sposn)
-                                  = stripFunType renFunType
+                                  = stripFunType renFunType     
                           outEqn  = TSimp (TypeVarInt typeCons,otype)
                           inEqns  = zipWith (\x y -> TSimp (TypeVarInt y,x)) 
                                             itypes 
@@ -1015,7 +1112,7 @@ fun_Dest (name,terms,posn) = do
                                  = fType 
                           inEqns = zipWith (\x y ->TSimp (TypeVarInt x,y)) termVars ins                                                   
                           outEqn = TSimp (TypeVarInt typeDest,out) 
-                          finEqn = TQuant ([],evars) (outEqn:(inEqns ++ termEqns)) 
+                          finEqn = TQuant ([],evars++termVars) (outEqn:(inEqns ++ termEqns)) 
                         return [finEqn]                                              
 
                     False -> do 
@@ -1029,7 +1126,15 @@ fun_Dest (name,terms,posn) = do
 -- ===================================================================================
 fun_Prod ::([Term],PosnPair) -> 
             EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) [TypeEqn]
-fun_Prod (terms,posn) = undefined
+fun_Prod (terms,posn) = do 
+        (_,typeProd,context,symTab) <- get
+        termVars  <- genNewVarList (length terms)
+        prodEqns  <- genEquationsList terms termVars
+        let 
+          tSimp  = TSimp (TypeVarInt typeProd,TypeProd (map TypeVarInt termVars,posn))
+          finEqn = TQuant ([],termVars) (tSimp:prodEqns)
+        modify $ \(n,tt,c,st) -> (n,tt,context,symTab)
+        return [finEqn]
 
 -- ===================================================================================
 -- ===================================================================================
@@ -1041,39 +1146,3 @@ fun_Default posn = do
           eqn = TSimp (TypeVarInt typeDef,TypeDataType ("Bool",[],posn))
         return [eqn]   
 
--- ===================================================================================
--- ===================================================================================
-combineEqns :: [TypeEqn] -> [TypeEqn]
-combineEqns totEqns
-        = case  noQuantEqns totEqns of 
-              True  ->
-                  totEqns
-              False ->
-                  combineEqnsHelper totEqns ([],[],[])
-
-combineEqnsHelper :: [TypeEqn] -> (UniVars,ExistVars,[TypeEqn]) -> [TypeEqn]
-combineEqnsHelper [] (suv,sev,steqns)
-        = [TQuant (suv,sev) steqns]
-combineEqnsHelper (eqn:eqns) (suv,sev,steqns)  
-        = case eqn of 
-             TSimp simpEqn ->
-                 combineEqnsHelper eqns (suv,sev,(steqns ++ [TSimp simpEqn]))
-             TQuant (uvars,evars) eqlist ->
-                 combineEqnsHelper eqns (suv++uvars,sev++evars,steqns++eqlist) 
-
--- return True if there is no Quant eqn
-noQuantEqns :: [TypeEqn] -> Bool 
-noQuantEqns eqns 
-        = case (filter isQuantEqn eqns) of 
-              [] -> 
-                  True
-              _  ->
-                  False    
-
-isQuantEqn :: TypeEqn -> Bool
-isQuantEqn eqn 
-        = case eqn of 
-              TQuant _ _ ->
-                  True
-              TSimp _ ->
-                  False   

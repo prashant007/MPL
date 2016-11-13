@@ -137,9 +137,11 @@ transPIdent :: PIdent -> (M.PosnPair,String)
 transPIdent x = case x of
   PIdent string -> string
 
+{-
 transInfixRem :: InfixRem -> (M.PosnPair,String)
 transInfixRem x = case x of
   InfixRem string -> string
+-}
 
 transTokString :: TokString -> (M.PosnPair,String)
 transTokString x = case x of 
@@ -158,6 +160,60 @@ transMPL :: MPL -> State [(String,[M.Name])] [M.Stmt]
 transMPL x = case x of
   MPLPROG mplstmts runstmt -> undefined
   MPLTest mplstmts -> mapM transMPLstmt mplstmts
+
+transInfix0op :: Infix0op -> M.FuncName
+transInfix0op x = case x of
+  Infix0op string -> detectFun "orB" 
+
+transInfix1op :: Infix1op -> M.FuncName
+transInfix1op x = case x of
+  Infix1op string -> detectFun "andB"
+
+transInfix2op :: Infix2op -> M.FuncName
+transInfix2op x = case x of
+  Infix2op string -> case string of 
+        "==" -> detectFun "eqI"
+        "/=" -> detectFun "notEqI"
+        "<"  -> detectFun "leqI"
+        ">"  -> detectFun "geqI" 
+        "<=" -> detectFun "leqI"
+        ">=" -> detectFun "geqI"
+        otherwise -> error $ "wrong symbol::" ++ string
+      
+
+transInfix3op :: Infix3op -> M.FuncName
+transInfix3op x = case x of
+  Infix3op string -> detectFun "concat"
+
+transInfix4op :: Infix4op -> M.FuncName
+transInfix4op x = case x of
+  Infix4op string -> case string of 
+      "+" -> detectFun "addI"
+      "-" -> detectFun "subI"
+      otherwise -> error $ "wrong symbol::" ++ string
+
+transInfix5op :: Infix5op -> M.FuncName
+transInfix5op x = case x of
+  Infix5op string -> case string of 
+      "*"    -> detectFun "mulI"
+      "/"    -> detectFun "quotI"
+      "%"    -> detectFun "remI"
+      "div"  -> detectFun "quotI"
+      "rem"  -> detectFun "remI"
+      "quot" -> detectFun "quotI"
+      otherwise -> error $ "wrong symbol::" ++ string
+
+transInfix6op :: Infix6op -> M.FuncName
+transInfix6op x = case x of
+  Infix6op string -> case string of
+      "^" -> detectFun "powI" 
+      otherwise -> error $ "wrong symbol::" ++ string
+
+transInfix7op :: Infix7op -> M.FuncName
+transInfix7op x = case x of
+  Infix7op string -> case string of
+      "!!" -> detectFun "index" 
+      otherwise -> error $ "wrong symbol::" ++ string
 
 -- ================================================================================
 -- ================================================================================
@@ -298,18 +354,18 @@ transDefn x = case x of
                                  errormsg,M.equalS,M.equalS
                                ]
 
-  OPERATORDEF operatordefn -> 
-      return $ transOperatorDefn operatordefn
+  --OPERATORDEF operatordefn -> 
+  --    return $ transOperatorDefn operatordefn
 
   PROCESSDEF processdef -> 
       transProcessDef processdef
 
-  TERMSYNDEF termsynonym -> 
-      return $ transTermSynonym termsynonym
+  --TERMSYNDEF termsynonym -> 
+  --    return $ transTermSynonym termsynonym
 
 -- ================================================================================
 
-
+{-
 transOperatorDefn :: OperatorDefn -> M.Defn 
 transOperatorDefn x = case x of
   INFIX_LEFT infixrem integer -> 
@@ -328,6 +384,8 @@ transOperatorDefn x = case x of
                      )
           where
             (posn,nm) = transInfixRem infixrem
+
+
 transTermSynonym :: TermSynonym -> M.Defn 
 transTermSynonym x = case x of
   TERM_SYNONYM tokterm pident1 infixrem pident2 pident3 pident4 pident5 -> 
@@ -337,6 +395,7 @@ transTermSynonym x = case x of
                   transTokTerm tokterm
                 )
 
+-}
 
 getDClauseName :: M.DataClause -> M.Name 
 getDClauseName (M.DataName (dnm,_),_) = dnm 
@@ -569,7 +628,7 @@ transDataPhrase x = case x of
             consNames= map snd tStructs
             tident   = snd $ transUIdent uident
             qList    = map (\(pn,t) -> (t,tTypes,tident,nargs,pn)) tStructs
-          dupCheck <- insertNamesInList ("constructors",consNames)
+          dupCheck <- insertNamesInList ("data type",consNames)
           case dupCheck of 
               Just errormsg ->
                  error $
@@ -595,7 +654,7 @@ transCoDataPhrase x = case x of
             tStructs = map transStructor structors 
             destNames= map snd tStructs
             qList    = map (\(pn,t) -> (t,tTypes,tOut,nargs,pn)) tStructs  
-          dupCheck <- insertNamesInList ("destructors",destNames)
+          dupCheck <- insertNamesInList ("codata type",destNames)
           case dupCheck of 
               Just errormsg ->
                  error $
@@ -653,23 +712,12 @@ transTypeParam x = case x of
 
 transType :: Type ->  State [(String,[M.Name])] M.Type 
 transType x = case x of
-  TYPEARROW typens typen -> 
-     case length typens == 1 of 
-         True  -> do 
-            inT <- transTypeN (head typens)
-            out <- transTypeN typen
-            let 
-              tPosn  = getTypePosn inT
-              cdatTy = M.TypeCodataType ("Exp",[inT,out],tPosn)
-            return cdatTy           
-
-         False -> do 
-            inT <- transTypeN (head typens)
-            sndT  <- transType (TYPEARROW (tail typens) typen)
-            let 
-              tPosn = getTypePosn inT
-              cdatTy= M.TypeCodataType ("Exp",[inT,sndT],tPosn)
-            return cdatTy
+  TYPEARROW typen stype -> do 
+       inT  <- transTypeN typen 
+       out  <- transType stype
+       let 
+         cdatTy = M.TypeCodataType ("Exp",[inT,out],getTypePosn inT)
+       return cdatTy 
 
   TYPENext typen -> 
       transTypeN typen 
@@ -699,23 +747,43 @@ transTypeN x = case x of
           Nothing  -> do 
               let 
                  errormsg =
-                      "\n Trying to use a data or codata that hasn't been defined, "
-                      ++ errorMsg posn 
+                      "\nTrying to use a data or codata <<" ++ name ++
+                      ">> that hasn't been defined, "
+                      ++ errorMsg posn ++ "\n" 
               error $ unlines [
                                 "\n",M.equalS,M.equalS,"*********Error*********",
                                 errormsg,M.equalS,M.equalS
                               ]
 
 
-
   TYPECONST_VAR uident -> do 
+      list <- get 
       let 
-        tuident = transUIdent uident
-        tType  = fromStrToType tuident 
-      return tType
+        (posn,name)
+                = transUIdent uident
+        newList = transformList list 
+        tType   = fromStrToType (posn,name)
+      case lookup name newList of    
+          Just category ->  
+              case category of 
+                 "data type"  ->  
+                     return $ M.TypeDataType (name,[],posn)
+                 "codata type"-> 
+                     return $ M.TypeCodataType (name,[],posn)
+                 otherwise   -> 
+                     return tType
+          
+          Nothing ->            
+              return tType
 
-  TYPEBRACKET typen -> do 
-      transTypeN typen  
+  TYPEPROD types -> do 
+      cTypes <- mapM transType types 
+      let 
+        tposn = getTypePosn (head cTypes)
+      return $ M.TypeProd (cTypes,tposn) 
+
+  TYPEBRACKET stype -> do 
+      transType stype
 
 
 
@@ -834,9 +902,9 @@ transPattTermPharse :: PattTermPharse ->
                        State [(String,[M.Name])] (M.PatternTermPhr,M.PosnPair)
 transPattTermPharse x = case x of
   PATTERNshort patterns term -> do 
-        tTerm <- transTerm term 
+        tTerm  <- transTerm term 
+        tPatts <- mapM transPattern patterns
         let
-          tPatts = map transPattern patterns
           tPosn  = getPattPosn (head tPatts)
         return $ (
                    (tPatts,Left tTerm),
@@ -845,8 +913,8 @@ transPattTermPharse x = case x of
       
   PATTERNguard patterns guardedterms -> do 
         tTerms <- mapM transGuardedTerm guardedterms
+        tPatts <- mapM transPattern patterns
         let 
-          tPatts = map transPattern patterns
           tPosn  = getPattPosn (head tPatts)
         return ((tPatts,Right tTerms),tPosn)
 
@@ -870,33 +938,76 @@ transGuardedTerm x = case x of
 
                 
 
-transPattern :: Pattern -> M.Pattern
+transPattern :: Pattern -> State [(String,[M.Name])] M.Pattern
 transPattern x = case x of
-  LISTPATTERN2 pattern1 pattern2 -> 
-          M.ConsPattern ("Cons",[tPatt1,tPatt2],tPosn)
-      where
-        tPosn  = getPattPosn tPatt1 
-        tPatt1 = transPattern pattern1
-        tPatt2 = transPattern pattern2
+  LISTPATTERN2 pattern1 pattern2 -> do 
+          tPatt1 <- transPattern pattern1
+          tPatt2 <- transPattern pattern2
+          let 
+            tPosn  = getPattPosn tPatt1 
+          return $ M.ConsPattern ("Cons",[tPatt1,tPatt2],tPosn)
+                
+  CONSPATTERN uident patterns -> do 
+         list <- get 
+         let 
+           (tPosn,name)
+                   = transUIdent uident
+           newList = transformList list 
+         tPatts <- mapM transPattern patterns 
+         case lookup name newList of    
+             Just category ->  
+                 case category == "data type" of 
+                     True  ->
+                         return $ M.ConsPattern (name,tPatts,tPosn) 
+                     False ->
+                         return $ M.DestPattern (name,tPatts,tPosn)  
 
-  CONSPATTERN uident patterns -> 
-          M.ConsPattern (name,tPatts,tPosn)
-      where
-         (tPosn,name) = transUIdent uident
-         tPatts       = map transPattern patterns  
+             Nothing -> do      
+                 let 
+                    errormsg =
+                          "\n Trying to use a data or codata that hasn't been defined, "
+                          ++ errorMsg tPosn 
+                 error $ unlines [
+                                    "\n",M.equalS,M.equalS,"*********Error*********",
+                                    errormsg,M.equalS,M.equalS
+                                  ] 
+
+  CONSPATTERN_WA uident -> do 
+         list <- get 
+         let 
+           (tPosn,name)
+                   = transUIdent uident
+           newList = transformList list 
+         case lookup name newList of    
+             Just category ->  
+                 case category == "data type" of 
+                     True  ->
+                         return $ M.ConsPattern (name,[],tPosn) 
+                     False ->
+                         return $ M.DestPattern (name,[],tPosn)  
+
+             Nothing -> do      
+                 let 
+                     errormsg =
+                          "\nTrying to use a constructor/destructor <<" ++ name ++  
+                          ">> that hasn't been defined, "
+                          ++ errorMsg tPosn 
+                 error $ unlines [
+                                    "\n",M.equalS,M.equalS,"*********Error*********",
+                                    errormsg,M.equalS,M.equalS
+                                  ] 
 
   LISTPATTERN1 patterns -> 
           case length patterns == 0 of 
               True  ->
-                    M.ConsPattern ("Nil",[],(0,0))
+                  return $ M.ConsPattern ("Nil",[],(0,0))
 
-              False ->
-                    M.ConsPattern ("Cons",[tPatt,restTPatt],tPosn)
-                where
-                  tPatt   = transPattern (head patterns)
-                  tPosn   = getPattPosn tPatt
-                  restTPatt
-                          = transPattern (LISTPATTERN1 (tail patterns))          
+              False -> do 
+                    tPatt     <- transPattern (head patterns)
+                    restTPatt <- transPattern (LISTPATTERN1 (tail patterns)) 
+                    return $ M.ConsPattern ("Cons",[tPatt,restTPatt],getPattPosn tPatt)
+                
+        
   PRODPATTERN patterns -> 
           case length patterns == 0 of 
               True  -> 
@@ -911,29 +1022,29 @@ transPattern x = case x of
                   case length patterns == 1 of 
                       True  -> 
                           transPattern (head patterns)
-                      False ->
-                          M.ProdPattern (tPatts,tPosn) 
-                        where
-                          tPatts = map transPattern patterns
-                          tPosn  = getPattPosn (head tPatts)
+                      False -> do 
+                          tPatts <- mapM transPattern patterns
+                          let 
+                            tPosn = getPattPosn (head tPatts)
+                          return $ M.ProdPattern (tPatts,tPosn) 
 
   VARPATTERN pident -> 
-          M.VarPattern (tName,tPosn)
+         return $ M.VarPattern (tName,tPosn)
       where
         (tPosn,tName) = transPIdent pident  
 
   STR_CONSTPATTERN tokstr ->
-          M.StrConstPattern (tName,tPosn)
+         return $ M.StrConstPattern (tName,tPosn)
       where
         (tPosn,tName) = transTokString tokstr  
 
   INT_CONSTPATTERN pinteger -> 
-          M.IntConstPattern (num,tPosn)
+         return $ M.IntConstPattern (num,tPosn)
       where
         (tPosn,num) = transPInteger pinteger 
 
   NULLPATTERN nullPatt -> 
-          M.DontCarePattern (transTokDCare nullPatt)
+         return $ M.DontCarePattern (transTokDCare nullPatt)
 
 -- ==========================================================================
 -- ==========================================================================
@@ -949,8 +1060,58 @@ transTerm x = case x of
           tRecs <- mapM transRecordEntryAlt recordentryalts 
           return $ M.TRecord tRecs
 
-  InfixTerm term1 infixrem term2 -> 
-          undefined 
+  --InfixTerm term1 infixrem term2 -> 
+  --        undefined 
+
+  Infix0TERM term3 i0op term4 -> do 
+          tTerm3 <- transTerm term3 
+          tTerm4 <- transTerm term4 
+          return $ M.TCallFun 
+                         (transInfix0op i0op,[tTerm3,tTerm4],getTermPosn tTerm3)               
+ 
+  Infix1TERM term4 i1op term5 -> do 
+          tTerm4 <- transTerm term4 
+          tTerm5 <- transTerm term5 
+          return $ M.TCallFun 
+                         (transInfix1op i1op,[tTerm4,tTerm5],getTermPosn tTerm4) 
+
+  Infix2TERM term5 i2op term6 -> do 
+          tTerm5  <- transTerm term5 
+          tTerm6  <- transTerm term6 
+          return $ M.TCallFun 
+                         (transInfix2op i2op,[tTerm5,tTerm6],getTermPosn tTerm5) 
+
+  Infix3TERM term6 i3op term7 -> do 
+          tTerm6  <- transTerm term6 
+          tTerm7  <- transTerm term7 
+          return $ M.TCallFun 
+                         (transInfix3op i3op,[tTerm6,tTerm7],getTermPosn tTerm6) 
+
+  Infix4TERM term7 i4op term8 -> do 
+          tTerm6  <- transTerm term7 
+          tTerm7  <- transTerm term8 
+          return $ M.TCallFun 
+                         (transInfix4op i4op,[tTerm6,tTerm7],getTermPosn tTerm7) 
+
+
+  Infix5TERM term8 i5op term9 -> do 
+          tTerm8  <- transTerm term8 
+          tTerm9  <- transTerm term9 
+          return $ M.TCallFun 
+                         (transInfix5op i5op,[tTerm8,tTerm9],getTermPosn tTerm8) 
+
+
+  Infix6TERM term10 i6op term9 -> do 
+          tTerm10  <- transTerm term10 
+          tTerm9   <- transTerm term9 
+          return $ M.TCallFun 
+                         (transInfix6op i6op,[tTerm10,tTerm9],getTermPosn tTerm9) 
+
+  Infix7TERM term10 i7op term11 -> do 
+          tTerm10  <- transTerm term10 
+          tTerm11   <- transTerm term11 
+          return $ M.TCallFun 
+                         (transInfix7op i7op,[tTerm10,tTerm11],getTermPosn tTerm10) 
 
 
   LISTTERM2 term1 term2 -> do 
@@ -969,15 +1130,15 @@ transTerm x = case x of
                     tPosn  = getTermPosn tTerm
                   return $ M.TCons ("Cons",[tTerm,tRest],tPosn)
          
-  LETTERM toklet term defns -> do 
-          tTerm  <- transTerm term
-          tDefns <- mapM transDefn defns
-          return $ M.TLet (tTerm,tDefns,transTokLet toklet)
+  LETTERM toklet term lwheres -> do 
+          tTerm    <- transTerm term
+          tletwhrs <- mapM transLetWhere lwheres 
+          return $ M.TLet (tTerm,tletwhrs,transTokLet toklet)
 
   VARTERM pident -> 
           return $ M.TVar ((swap.transPIdent) pident)
 
-  CONSTTERM constanttype -> 
+  CONSTTERM constanttype -> do            
           return $ M.TConst (transConstantType constanttype)
 
   IFTERM tokif term1 term2 term3 -> do 
@@ -1007,18 +1168,54 @@ transTerm x = case x of
                            )
 
   GENCONSTERM_WARGS uident terms -> do
+        list <- get        
         let 
           (posn,name) 
-               = transUIdent uident
+                  = transUIdent uident
+          newList = transformList list  
         tTerms <- mapM transTerm terms  
-        return $ M.TCons (name,tTerms,posn)
-
+        case lookup name newList of  
+          Just category ->  
+              case category == "data type" of 
+                  True  -> 
+                      return $ M.TCons (name,tTerms,posn)
+                  False -> 
+                      return $ M.TDest (name,tTerms,posn)
+  
+          Nothing  -> do 
+              let 
+                 errormsg =
+                      "\nTrying to use a constructor/destructor <<" ++ name ++
+                      ">> that hasn't been defined, "++ errorMsg posn 
+              error $ unlines [
+                                "\n",M.equalS,M.equalS,"*********Error*********",
+                                errormsg,M.equalS,M.equalS
+                              ]            
+        
   GENCONSTERM_WOARGS uident -> do 
-         let 
-           (posn,name) 
-               = transUIdent uident
-         return $ M.TCons (name,[],posn)
-
+        list <- get        
+        let 
+          (posn,name) 
+                  = transUIdent uident
+          newList = transformList list  
+        case lookup name newList of  
+          Just category ->  
+              case category == "data type" of 
+                  True  -> 
+                      return $ M.TCons (name,[],posn)
+                  False -> 
+                      return $ M.TDest (name,[],posn)
+  
+          Nothing  -> do 
+              let 
+                 errormsg =
+                      "\nTrying to use a constructor/destructor <<" ++ name ++
+                      ">> that hasn't been defined, "++ errorMsg posn 
+              error $ unlines [
+                                "\n",M.equalS,M.equalS,"*********Error*********",
+                                errormsg,M.equalS,M.equalS
+                              ]
+                                
   PRODTERM terms -> do 
           tTerms <- mapM transTerm terms
           let 
@@ -1032,6 +1229,24 @@ transTerm x = case x of
                = transPIdent pident
         return $ M.TCallFun (detectFun name,tTerms,posn)
 
+
+transLetWhere :: LetWhere -> State [(String,[M.Name])] M.LetWhere
+transLetWhere lwhs
+   = case lwhs of 
+         DEFN_LetWhere defn -> do 
+             tDefn <- transDefn defn
+             return $ M.LetDefn tDefn
+         PATTTERM_LetWhere pattTerm -> do
+             tPattTerm <- transPattTerm pattTerm 
+             return $ M.LetPatt tPattTerm
+
+transPattTerm :: PattTerm -> State [(String,[M.Name])] (M.Pattern,M.Term)
+transPattTerm (JUSTPATTTERM patt term) = do 
+         tPatt <- transPattern patt 
+         tTerm <- transTerm term 
+         return (tPatt,tTerm)  
+
+
 detectFun :: M.Name -> M.FuncName
 detectFun name 
         | name == "addI"  = M.BuiltIn (M.Add_I)
@@ -1041,14 +1256,18 @@ detectFun name
         | name == "remI"  = M.BuiltIn (M.DivR_I) 
         | name == "eqI"   = M.BuiltIn (M.Eq_I)
         | name == "leqI"  = M.BuiltIn (M.Leq_I)
+        | name == "notEqI"= M.BuiltIn (M.Neq_I)
+        | name == "lessI" = M.BuiltIn (M.LT_I)
+        | name == "grtI"  = M.BuiltIn (M.GT_I) 
+        | name == "geqI"  = M.BuiltIn (M.Geq_I)
         | name == "eqC"   = M.BuiltIn (M.Eq_C)
-        | name == "leqC"  = M.BuiltIn (M.Leq_C)
         | name == "eqS"   = M.BuiltIn (M.Eq_S)
-        | name == "leqS"  = M.BuiltIn (M.Leq_S) 
         | name == "concat"= M.BuiltIn (M.Concat_S)
         | name == "unstring"   = M.BuiltIn (M.Unstring_S)
         | name == "headString" = M.BuiltIn (M.HeadString_S)
         | name == "tailString" = M.BuiltIn (M.TailString_S)
+        | name == "orB"         = M.BuiltIn (M.Or_B)
+        | name == "andB"        = M.BuiltIn (M.And_B)
         | otherwise            = M.Custom name
 
 
@@ -1074,21 +1293,17 @@ transConstantType x = case x of
 transRecordEntryAlt :: RecordEntryAlt -> 
                       State [(String,[M.Name])] (M.Pattern,M.Term,M.PosnPair)
 transRecordEntryAlt x = case x of
-  RECORDENTRY_ALT recordentry -> do 
-          trec <- transRecordEntry recordentry
-          return trec
+  RECORDENTRY_ALT recEntry -> do 
+        transRecordEntry recEntry 
+
 
 transRecordEntry :: RecordEntry ->
                     State [(String,[M.Name])] (M.Pattern,M.Term,M.PosnPair)
 transRecordEntry x = case x of
-  RECORDENTRY uident pidents term -> do 
-        let 
-          (uposn,uname) 
-                   = transUIdent uident
-          pargs    = map ((M.VarPattern).swap.transPIdent) pidents
-          destPatt = M.DestPattern (uname,pargs,uposn)
-        tTerm <- transTerm term   
-        return (destPatt,tTerm,uposn) 
+  RECORDENTRY patt term -> do
+        destPatt <- transPattern patt
+        tTerm    <- transTerm term 
+        return (destPatt,tTerm,getPattPosn destPatt) 
 
 
 

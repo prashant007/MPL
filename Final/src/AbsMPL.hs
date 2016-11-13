@@ -41,9 +41,9 @@ newtype TokDefault = TokDefault ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 newtype TokRecord = TokRecord ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
-newtype TokLet = TokLet ((Int,Int),String)
-  deriving (Eq, Ord, Show, Read)
 newtype TokIf = TokIf ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+newtype TokLet = TokLet ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 newtype TokFold = TokFold ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
@@ -77,10 +77,16 @@ newtype UIdent = UIdent ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 newtype PIdent = PIdent ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
-newtype InfixRem = InfixRem ((Int,Int),String)
-  deriving (Eq, Ord, Show, Read)
 newtype PInteger = PInteger ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
+newtype Infix0op = Infix0op String deriving (Eq, Ord, Show, Read)
+newtype Infix1op = Infix1op String deriving (Eq, Ord, Show, Read)
+newtype Infix2op = Infix2op String deriving (Eq, Ord, Show, Read)
+newtype Infix3op = Infix3op String deriving (Eq, Ord, Show, Read)
+newtype Infix4op = Infix4op String deriving (Eq, Ord, Show, Read)
+newtype Infix5op = Infix5op String deriving (Eq, Ord, Show, Read)
+newtype Infix6op = Infix6op String deriving (Eq, Ord, Show, Read)
+newtype Infix7op = Infix7op String deriving (Eq, Ord, Show, Read)
 data MPL = MPLPROG [MPLstmt] RUNstmt | MPLTest [MPLstmt]
   deriving (Eq, Ord, Show, Read)
 
@@ -102,17 +108,7 @@ data Defn
     = TYPEDEF TypeDefn
     | PROTOCOLDEF CTypeDefn
     | FUNCTIONDEF FunctionDefn
-    | OPERATORDEF OperatorDefn
     | PROCESSDEF ProcessDef
-    | TERMSYNDEF TermSynonym
-  deriving (Eq, Ord, Show, Read)
-
-data OperatorDefn
-    = INFIX_LEFT InfixRem Integer | INFIX_RIGHT InfixRem Integer
-  deriving (Eq, Ord, Show, Read)
-
-data TermSynonym
-    = TERM_SYNONYM TokTerm PIdent InfixRem PIdent PIdent PIdent PIdent
   deriving (Eq, Ord, Show, Read)
 
 data TypeDefn
@@ -143,7 +139,7 @@ data TypeSpec
 data TypeParam = TYPEPARAM UIdent
   deriving (Eq, Ord, Show, Read)
 
-data Type = TYPEARROW [TypeN] TypeN | TYPENext TypeN
+data Type = TYPEARROW TypeN Type | TYPENext TypeN
   deriving (Eq, Ord, Show, Read)
 
 data TypeN
@@ -151,7 +147,8 @@ data TypeN
     | TYPELIST TypeN
     | TYPEDATCODAT UIdent [Type]
     | TYPECONST_VAR UIdent
-    | TYPEBRACKET TypeN
+    | TYPEPROD [Type]
+    | TYPEBRACKET Type
   deriving (Eq, Ord, Show, Read)
 
 data CTypeDefn
@@ -219,6 +216,7 @@ data GuardedTerm = GUARDterm Term Term | GUARDother TokDefault Term
 data Pattern
     = LISTPATTERN2 Pattern Pattern
     | CONSPATTERN UIdent [Pattern]
+    | CONSPATTERN_WA UIdent
     | LISTPATTERN1 [Pattern]
     | PRODPATTERN [Pattern]
     | VARPATTERN PIdent
@@ -228,12 +226,17 @@ data Pattern
   deriving (Eq, Ord, Show, Read)
 
 data Term
-    = RECORDTERM TokRecord [RecordEntry]
-    | RECORDTERMALT [RecordEntryAlt]
-    | InfixTerm Term InfixRem Term
-    | LISTTERM2 Term Term
+    = LISTTERM2 Term Term
+    | Infix0TERM Term Infix0op Term
+    | Infix1TERM Term Infix1op Term
+    | Infix2TERM Term Infix2op Term
+    | Infix3TERM Term Infix3op Term
+    | Infix4TERM Term Infix4op Term
+    | Infix5TERM Term Infix5op Term
+    | Infix6TERM Term Infix6op Term
+    | Infix7TERM Term Infix7op Term
     | LISTTERM [Term]
-    | LETTERM TokLet Term [Defn]
+    | LETTERM TokLet Term [LetWhere]
     | VARTERM PIdent
     | CONSTTERM ConstantType
     | IFTERM TokIf Term Term Term
@@ -244,6 +247,14 @@ data Term
     | GENCONSTERM_WOARGS UIdent
     | PRODTERM [Term]
     | FUNAPPTERM PIdent [Term]
+    | RECORDTERM TokRecord [RecordEntry]
+    | RECORDTERMALT [RecordEntryAlt]
+  deriving (Eq, Ord, Show, Read)
+
+data LetWhere = DEFN_LetWhere Defn | PATTTERM_LetWhere PattTerm
+  deriving (Eq, Ord, Show, Read)
+
+data PattTerm = JUSTPATTTERM Pattern Term
   deriving (Eq, Ord, Show, Read)
 
 data ConstantType
@@ -253,7 +264,7 @@ data ConstantType
 data RecordEntryAlt = RECORDENTRY_ALT RecordEntry
   deriving (Eq, Ord, Show, Read)
 
-data RecordEntry = RECORDENTRY UIdent [PIdent] Term
+data RecordEntry = RECORDENTRY Pattern Term
   deriving (Eq, Ord, Show, Read)
 
 data ProcessDef

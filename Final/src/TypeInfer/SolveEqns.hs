@@ -107,7 +107,10 @@ solve_Quant (uvars,evars) eithList = do
                                              Left emsg2 ->
                                                  left emsg2 
 
-                                             Right (rFreeVars,rUVars,rEVars,rSubstList) -> 
+                                             Right upack@(rFreeVars,rUVars,rEVars,rSubstList) -> do
+                                                 modify $ \l -> printLog packList upack intLog
+                                                 return upack
+                                                 {-
                                                  case rUVars == [] of 
                                                      True  -> do 
                                                          let 
@@ -115,50 +118,23 @@ solve_Quant (uvars,evars) eithList = do
                                                                = (rFreeVars,rUVars,rEVars,rSubstList)
                                                          modify $ \l -> printLog packList finPackage intLog      
                                                          return finPackage
-                                                     False ->
-                                                         case handle_UVars rUVars rSubstList of 
-                                                             Right (hUVars,hsubstList) -> do 
-                                                                let 
-                                                                  finPackage 
-                                                                      = (([],[]),hUVars,rEVars,hsubstList) 
-                                                                      -- change the free variables here
-                                                                modify $ \l -> printLog packList finPackage intLog                                       
-                                                                return finPackage
-                                                             Left emsg3 ->
-                                                                 left $ emsg3 
+                                                     False -> do 
+                                                         let 
+                                                           mayfinPackage = handle_UVars upack
+                                                         case mayfinPackage of 
+                                                             Left emsg ->
+                                                                 left emsg
+                                                             Right finPackage -> do    
+                                                                 modify $ \l -> printLog packList finPackage intLog                                       
+                                                                 return finPackage
+                                                  -}               
 
 
                                  
-                                 
-handle_UVars :: UniVars -> SubstList -> Either ErrorMsg (UniVars,SubstList)
-handle_UVars [] []
-        = return ([],[])
-handle_UVars (u:us) substlist
-        = case lookup u substlist of 
-              Just texpr -> 
-                  case texpr of 
-                      TypeVarInt v ->
-                          if u == v 
-                              then 
-                                  handle_UVars us (delete (u,TypeVarInt u) substlist)
-                              else 
-                                  Left $ "Inferred type and given types don't match" 
-                      otherwise ->
-                          Left $ "Inferred type and given types don't match" 
-              Nothing -> 
-                   handle_UVars us substlist         
+
                                         
 
- 
 
-testSubst :: SubstList -> [Package] -> [Package]
-testSubst subst pack = getRight $ evalState eVal []
-     where 
-      eVal = runEitherT (subst_Packages subst pack)
 
-testQuant :: (UniVars,ExistVars) -> Package -> Package 
-testQuant (uvars,evars) pack 
-        = getRight $ evalState eval []
-    where
-       fval = solve_Quant (uvars,evars) [right pack]
-       eval = runEitherT fval
+     
+                                        
