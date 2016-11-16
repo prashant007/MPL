@@ -2,7 +2,7 @@ module TypeInfer.SolveHelper where
 
 import TypeInfer.MPL_AST 
 import TypeInfer.UnifyLam  
-
+import TypeInfer.EqGenCommFuns
 
 import Control.Monad.State.Lazy
 import Control.Monad.Trans.Either

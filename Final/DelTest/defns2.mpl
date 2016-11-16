@@ -14,8 +14,7 @@ data Bool -> C = True  :: ->  C
 
 data Pair (A,B) -> C = Pair :: A,B -> C 
 
-
-fun zipfun :: List(A),List(B) -> List (<B,A>) = 
+fun zipfun :: List(A),List(B) -> List (<A,B>) = 
     []    ,[]      -> []
     (x:xs),(y:ys)  -> (<x,y>:zipfun (xs,ys)) 
 

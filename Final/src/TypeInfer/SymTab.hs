@@ -1,6 +1,7 @@
 module TypeInfer.SymTab where
 
 import TypeInfer.MPL_AST
+import TypeInfer.EqGenCommFuns
 import TypeInfer.SymTabDataType
 import TypeInfer.SymTabHelper
 import TypeInfer.SymTabInsert
@@ -256,24 +257,3 @@ update_ST_List (d:ds) symTab = do
         finSymTab  <- update_ST_List ds newsymTab
         return finSymTab
 
--- =====================================================================================
--- =====================================================================================
-
-
-genNewVar :: EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) Int 
-genNewVar = do
-    (num,_,_,_) <- get 
-    modify $ \(x,t,c,st) -> (x + 1,t,c,st)
-    return num 
-
--- =====================================================================================
--- =====================================================================================
-
-
-genNewVarList :: Int -> EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) [Int]
-genNewVarList 0 =
-    return [] 
-genNewVarList n = do 
-    v  <- genNewVar 
-    vs <- genNewVarList (n-1)
-    return (v:vs)

@@ -1,6 +1,7 @@
 module TypeInfer.UnifyLam  where
 
 import TypeInfer.MPL_AST 
+import TypeInfer.EqGenCommFuns
 import Data.Either 
 import Data.List 
 
@@ -87,7 +88,8 @@ matchStructure (texpr1,texpr2)
                        False -> do 
                            let 
                              emsg = "\nExpected data type <<"
-                                    ++ dname1 ++ ">> instead got <<" ++  dname2 ++ ">> "
+                                    ++ showError texpr1 ++ ">> instead got <<" ++ showError texpr2 
+                                    ++ ">> " ++ printPosn dposn2 
                            Left emsg  
 
               (TypeCodataType (cname1,dins1,dposn1),TypeCodataType (cname2,dins2,dposn2)) ->
@@ -97,7 +99,8 @@ matchStructure (texpr1,texpr2)
                        False -> do 
                            let 
                              emsg = "\nExpected codata type "
-                                    ++ cname1 ++ ">> instead got <<" ++  cname2 ++ ">>" 
+                                    ++ show texpr1 ++ ">> instead got <<" ++ show texpr2
+                                    ++ ">>" ++ printPosn dposn2 
                            Left emsg  
 
               (TypeProd (prods1,posn1),TypeProd (prods2,posn2)) -> do 
@@ -127,30 +130,33 @@ matchStructure (texpr1,texpr2)
 
               otherwise -> do 
                   let 
-                    emsg = "\nExpecting the type <<" ++ printType texpr1
-                            ++ ">> instead got the type <<" ++ printType texpr2 ++ ">>"
+                    emsg = "\nExpecting the type <<" ++ showError texpr1
+                            ++ ">> instead got the type <<" ++ printTypePn texpr2
                   Left emsg    
 
 
-printType :: Type -> String 
-printType sType = 
-        case sType of
-            Unit pn -> 
-                "UNIT " 
-            TypeDataType (dname,_,pn) -> 
-                "DATA TYPE " ++ show dname 
-            TypeCodataType (cdname,_,pn) ->
-                "CODATA TYPE " ++ show cdname 
-            TypeProd (_,pn) ->
-                 "TUPLE " 
-            TypeConst (btype,pn) ->
-                 printConst btype 
-            TypeVar (str,pn) ->
-                 "VARIABLE "
-            TypeVarInt _ -> 
-                 "VARIABLE " 
-            TypeFun (_,_,pn) ->
-                 "FUN TYPE " 
+showError :: Type -> String
+showError t 
+        = case intTypeToStrType iType of
+              Left emsg ->
+                  show t
+              Right strType -> 
+                  show newType   
+                where
+                  StrFType (_,newType)
+                        = strType  
+            where
+              iType = IntFType (freeVars t,t)  
+            
+
+
+
+printTypePn :: Type -> String 
+printTypePn sType 
+        = showError sType ++ ">> " ++ printPosn pn 
+    where
+      pn = getTypePosn sType
+
 
 
 coalesce ::  (Subst,SubstList) -> Either ErrorMsg SubstList

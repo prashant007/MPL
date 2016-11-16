@@ -1,6 +1,7 @@
 module TypeInfer.Gen_Eqns_Helper_Patt where 
 
 import TypeInfer.MPL_AST
+import TypeInfer.EqGenCommFuns
 import TypeInfer.SymTabDataType
 import TypeInfer.SymTab 
 
@@ -95,7 +96,7 @@ helperPattCons patts (consName,posn) (ftype,nargs) = do
                 pattEqns   <- genPattEquationsList patts newVars
                 let 
                   (univVars,itypes,otype,sposn)
-                          = stripFunType renFunType
+                          = stripFunType renFunType posn 1
                   outEqn  = TSimp (TypeVarInt typePattCons,otype)
                   inEqns  = zipWith (\x y -> TSimp (TypeVarInt y,x)) itypes newVars
                   finEqns = combineEqns 
@@ -143,7 +144,7 @@ helperPattDest patts (destName,posn) (funType,nargs) = do
                 pattEqns   <- genPattEquationsList patts newVars
                 let 
                   (univVars,itypes,otype,sposn)
-                            = stripFunType renFunType
+                            = stripFunType renFunType posn 1
                   iTypesWORec
                             = init itypes 
                   tFunSTab  = TypeFun (itypes,otype,sposn)
@@ -161,18 +162,35 @@ helperPattDest patts (destName,posn) (funType,nargs) = do
                        ++ show nargs ++ " ,got " ++ show (length patts)
                 left emsg 
 
-stripFunType :: FunType -> ([Int],[Type],Type,PosnPair)
-stripFunType funType 
+stripFunType :: FunType -> PosnPair -> Int -> ([Int],[Type],Type,PosnPair)
+stripFunType funType nposn flag
         = case funType of 
               IntFType (uvars,ifunType) -> 
                   case ifunType of
                       TypeFun (itypes,otype,posn) ->
-                          (uvars,itypes,otype,posn)
+                          case flag == 1 of
+                              True ->
+                                  (uvars,map (changePosn nposn) itypes,
+                                   changePosn nposn otype,posn)
+                              False ->  
+                                  (uvars,itypes,otype,posn)    
                       otherwise ->
                           error $ show funType 
 
               otherwise ->
                   error $ "Not expecting a function type like this::" ++ show funType     
+
+
+changePosn :: PosnPair ->Type -> Type 
+changePosn nposn stype
+        = case stype of 
+              TypeDataType   (dn,dins,opn)   ->
+                  TypeDataType (dn,map (changePosn nposn) dins,nposn) 
+              TypeCodataType (cdn,cdins,opn) ->
+                  TypeCodataType (cdn,map (changePosn nposn) cdins,nposn)
+              otherwise -> 
+                  stype 
+
 
 -- =========================================================================================
 -- ========================================================================================= 
@@ -274,120 +292,7 @@ getOutFnType (TypeFun (ins,out,pn)) = (ins,out)
 
 
 
--- Take a type with TypeVar String and change the variables to TypeVarInt Int 
-renameFunType :: FunType -> 
-                 EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) FunType
-renameFunType funType = do 
-        case funType of 
-            StrFType (uVars,ftype) -> do 
-                uvarInts <- genNewVarList (length uVars)
-                let 
-                  substList = zip uVars uvarInts
-                  newFType  = renameTVar substList ftype
-                return $ IntFType (uvarInts,newFType)
-            
-            otherwise -> 
-                return funType    
 
-
-intTypeToStrType :: FunType -> Either ErrorMsg FunType
-intTypeToStrType funType = do 
-        case funType of 
-            IntFType (uvars,fType) -> do 
-                  let  
-                     uVarsStrs = map (\x -> "T" ++ show x)
-                                     [0,1..(length uvars-1)]
-                     substList = zip uvars uVarsStrs 
-                  case renameTVarInts substList fType of 
-                      Just newFType -> 
-                          return $ StrFType (uVarsStrs,newFType)
-                      Nothing ->
-                         Left $ ". Error renaming ::" ++ show funType     
-            otherwise ->
-                 return funType  
-
-renameTVarInts :: [(Int,String)] -> Type -> Maybe Type 
-renameTVarInts substList intType
-        = case intType of 
-              Unit pn -> 
-                  return $
-                      Unit pn 
-
-              TypeDataType (name,dtypes,posn) -> do 
-                  mDats <- mapM (renameTVarInts substList) dtypes
-                  return $ 
-                      TypeDataType (name,mDats,posn)
-
-              TypeCodataType (name,dtypes,posn) -> do 
-                  mCoDats <- mapM (renameTVarInts substList) dtypes
-                  return $ 
-                      TypeCodataType (name,mCoDats,posn)
-              
-              TypeProd (types,posn) -> do 
-                  mProds <- mapM (renameTVarInts substList) types
-                  return $ 
-                      TypeProd (mProds,posn)  
-
-              TypeConst (bType,posn) ->
-                  return intType
-
-              TypeVar (var,posn) ->
-                  return $ 
-                      TypeVar (var,posn)
-
-              TypeVarInt num ->
-                  case lookup num substList of 
-                      Nothing ->
-                          Nothing
-                      Just sval -> 
-                          return $
-                              TypeVar(sval,(0,0))
-
-
-              TypeFun (itypes,otype,posn) -> do 
-                  miTypes <- mapM (renameTVarInts substList) itypes
-                  moType  <- renameTVarInts substList otype
-                  return $ 
-                      TypeFun (
-                                miTypes,
-                                moType,
-                                posn
-                              )
-
-renameTVar :: [(String,Int)] -> Type -> Type 
-renameTVar substList typeflem   
-        = case typeflem of
-              Unit pn -> 
-                  Unit pn 
-
-              TypeDataType (name,dtypes,posn) ->
-                  TypeDataType (name,map (renameTVar substList) dtypes,posn)
-
-              TypeCodataType (name,dtypes,posn) ->
-                  TypeCodataType (name,map (renameTVar substList) dtypes,posn)
-              
-              TypeProd (types,posn) ->
-                  TypeProd (map (renameTVar substList) types,posn)  
-
-              TypeConst (bType,posn) ->
-                  typeflem
-
-              TypeVar (var,posn) ->
-                  case lookup var substList of 
-                      Just varInt -> 
-                          TypeVarInt varInt
-                      Nothing ->
-                          error "This means the universal var list for function type was not accurate."
-
-              TypeVarInt num ->
-                  typeflem
-
-              TypeFun (itypes,otype,posn) ->
-                  TypeFun (
-                            map (renameTVar substList) itypes,
-                            renameTVar substList otype,
-                            posn
-                          )
                                    
 
 -- ===================================================================================

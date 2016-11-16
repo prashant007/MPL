@@ -80,7 +80,7 @@ fun compress =
       []   -> []
       l:ls -> l:compresHelper (ls,l)
 
---  (54) Check whether a given term represents a binary tree
+--  (54) Check whether a given term represents a balanced binary tree
 
 fun noOfNodes = 
      tree -> 

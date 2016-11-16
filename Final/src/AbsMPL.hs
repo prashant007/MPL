@@ -9,6 +9,10 @@ module AbsMPL where
 
 newtype TokUnit = TokUnit ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
+newtype TokSBrO = TokSBrO ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+newtype TokSBrC = TokSBrC ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
 newtype TokDefn = TokDefn ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 newtype TokRun = TokRun ((Int,Int),String)
@@ -144,7 +148,7 @@ data Type = TYPEARROW TypeN Type | TYPENext TypeN
 
 data TypeN
     = TYPEUNIT TokUnit
-    | TYPELIST TypeN
+    | TYPELIST TokSBrO TypeN TokSBrC
     | TYPEDATCODAT UIdent [Type]
     | TYPECONST_VAR UIdent
     | TYPEPROD [Type]
@@ -217,7 +221,7 @@ data Pattern
     = LISTPATTERN2 Pattern Pattern
     | CONSPATTERN UIdent [Pattern]
     | CONSPATTERN_WA UIdent
-    | LISTPATTERN1 [Pattern]
+    | LISTPATTERN1 TokSBrO [Pattern] TokSBrC
     | PRODPATTERN [Pattern]
     | VARPATTERN PIdent
     | STR_CONSTPATTERN TokString
@@ -235,7 +239,7 @@ data Term
     | Infix5TERM Term Infix5op Term
     | Infix6TERM Term Infix6op Term
     | Infix7TERM Term Infix7op Term
-    | LISTTERM [Term]
+    | LISTTERM TokSBrO [Term] TokSBrC
     | LETTERM TokLet Term [LetWhere]
     | VARTERM PIdent
     | CONSTTERM ConstantType

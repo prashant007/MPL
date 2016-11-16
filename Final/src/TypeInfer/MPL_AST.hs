@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 module TypeInfer.MPL_AST where 
 
-import Data.List 
 import Text.PrettyPrint.GenericPretty
 import Text.PrettyPrint
+import Data.List 
 
 type MPL            = [Stmt]
 type Process        = [ProcessCommand]
@@ -269,7 +269,7 @@ data PChannel =  PosChan String
 -}
 
 {-
-TERM_SYNONYM.TermSynonym    ::= TokTerm PIdent InfixRem PIdent "="
+TERM_SYNONYTermSynonym    ::= TokTerm PIdent InfixRem PIdent "="
                                  PIdent "(" PIdent "," PIdent ")" ;
 -}
 
@@ -335,58 +335,3 @@ type TypeThing = Int
 
 zigStyle :: Style
 zigStyle = Style {mode = PageMode, lineLength = 90, ribbonsPerLine = 1.1}
-
-equalS = replicate 90 '='
-stars  = replicate 90 '*'
-
-getParamVars :: Type -> [String]
-getParamVars typeP = nub (getTypeVars typeP)
-
-getTypeVars :: Type -> [String]
-getTypeVars sType 
-        = case sType of 
-              Unit pn -> 
-                  []
-              
-              TypeDataType (_,types,pn) ->
-                  concat $ map getTypeVars types 
-
-              TypeCodataType (_,types,pn) ->
-                  concat $ map getTypeVars types 
-
-              TypeProd (types,pn) ->
-                  concat $ map getTypeVars types 
-
-              TypeConst _ ->
-                  [] 
-
-              TypeVar (t,pn) -> 
-                  [t]
-
-              TypeVarInt _ ->
-                  []
-
-              TypeFun (types,stype,pn) ->
-                  concat $ map getTypeVars (stype:types)   
-
-strToTVar :: [String] -> PosnPair -> [Type] 
-strToTVar args dposn = map (\x -> TypeVar (x,dposn)) args
-
-freeVars :: Type -> [Int]
-freeVars texpr 
-        = case texpr of
-              TypeVarInt x -> 
-                   [x]
-              TypeFun (tins,tout,posn) ->
-                   nub $ concat $ map freeVars (tout:tins)
-              TypeDataType (name,dins,posn) ->
-                   nub $ concat $ map freeVars dins 
-              TypeCodataType (name,dins,posn) ->
-                   nub $ concat $ map freeVars dins 
-              TypeProd (types,pn) -> 
-                   nub $ concat $ map freeVars types   
-              otherwise ->
-                   []   
-
-printPosn :: PosnPair -> String
-printPosn (line,col) = " at line,column (" ++ show line ++ "," ++ show col ++ ")"

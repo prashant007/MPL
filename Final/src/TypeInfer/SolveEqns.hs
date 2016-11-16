@@ -1,6 +1,7 @@
 module TypeInfer.SolveEqns where
 
 import TypeInfer.MPL_AST 
+import TypeInfer.EqGenCommFuns
 import TypeInfer.UnifyLam  
 import TypeInfer.SolveHelper 
 

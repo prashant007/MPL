@@ -21,18 +21,22 @@ fun length =
     []     -> 0
     (x:xs) -> 1 + length (xs) 
 
-
 defn of
-    fun occursCheck =
-        Var(num),ud -> case ud of 
-            Var (n)      -> True
-            Funs (fn,uds) -> ocheckList (Var(num) ,uds)
 
-    fun ocheckList =
+    fun occursCheck :: UnifData,UnifData -> Bool =
+        Var(num),ud -> case ud of 
+            Var (n) -> 
+                True 
+            Funs (fn,uds) ->
+                ocheckList (Var(num) ,uds)  
+
+    fun ocheckList :: UnifData, [UnifData]-> Bool =
         v,[]   -> True
-        v,u:us -> occursCheck (v,u) && ocheckList (v,us)          
+        v,u:us -> occursCheck (v,u) && ocheckList (v,us)  
+
+
     
-    fun match_Help  = 
+    fun match_Help :: UnifData,UnifData -> SF ([UnifEqn])  = 
            Funs(fname1,fuds1),Funs (fname2,fuds2) ->
                switch
                   fname1 == fname2 && length (fuds1) == length (fuds2) = 
@@ -46,7 +50,7 @@ defn of
                    False -> FF
 
            Var(n),Funs (fname,fuds) ->
-               case ocheckList (Var(n),fuds) of
+               case ocheckList (Var (n),fuds) of
                    True  -> SS ([Eqn (Var(n),Funs(fname,fuds))])
                    False -> FF
 
@@ -55,7 +59,7 @@ defn of
                    num1 == num2 = SS ([])
                    default      = SS ([Eqn (Var(num1),Var (num2))])
 
-    fun help_Funs = 
+    fun help_Funs :: [UnifData],[UnifData] -> SF ([UnifEqn])  = 
             [],[] ->
                 SS ([])
             (u1:ud1),(u2:ud2) ->
@@ -65,7 +69,6 @@ defn of
                       case help_Funs (ud1,ud2) of
                           FF           -> FF
                           SS (remEqns) -> SS (append (fEqns,remEqns))
-
 
 
 fun unify :: UnifEqn -> SF ([UnifEqn]) = 

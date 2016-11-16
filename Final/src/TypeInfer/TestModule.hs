@@ -1,6 +1,7 @@
 module TypeInfer.TestModule where
 
 import TypeInfer.GenEqns_MPL
+import TypeInfer.EqGenCommFuns
 import TypeInfer.SolveEqns
 import TypeInfer.MPL_AST
 import TypeInfer.SymTab

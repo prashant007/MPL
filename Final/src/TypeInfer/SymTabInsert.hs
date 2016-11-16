@@ -1,6 +1,7 @@
 module TypeInfer.SymTabInsert where
 
 import TypeInfer.MPL_AST
+import TypeInfer.EqGenCommFuns
 import TypeInfer.SymTabDataType
 import TypeInfer.SymTabHelper 
 
