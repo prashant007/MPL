@@ -18,9 +18,12 @@ check (texpr1,texpr2)
                            let 
                               TypeVarInt var2 = texpr2
                            return [(var2,texpr1)]
-                       False ->
-                           Left $ "Fails Occurs Check: Expr <<" ++ show texpr2 
-                                   ++ ">> occurs in Expr <<" ++ show texpr1 ++ ">>.\n"
+                       False -> do 
+                           let 
+                             (t1,t2) = showErrorFun texpr1 texpr2
+                           Left $ "Fails Occurs Check:" ++
+                                  "Can't match given type <<" ++ showError t2
+                                   ++ ">> with actual type <<" ++ printTypePn t1 
 
 -- here too the second expression is a TVar 
 -- return True if occurs check is passed
@@ -46,8 +49,10 @@ match (t1,t2)
         = case (t1,t2) of   
               (TypeVarInt x,texpr) -> 
                   check (texpr,TypeVarInt x)
+
               (texpr,TypeVarInt x) ->
-                  check (texpr,TypeVarInt x)
+                  check (texpr,TypeVarInt x) 
+
               (fexpr,gexpr)  -> 
                   case matchStructure (fexpr,gexpr) of
                       Right ziplist  -> do 
@@ -78,43 +83,37 @@ matchStructure (texpr1,texpr2)
                            return $ zip (out1:ins1) (out2:ins2)
                        False -> do 
                            let 
-                              emsg = "\nWrong number of arguments used with function." 
+                              emsg = "\nFunction called with incorrect number of arguments\n"
+                                      ++ matchError (texpr1,texpr2) 
                            Left emsg        
 
               (TypeDataType (dname1,dins1,dposn1),TypeDataType (dname2,dins2,dposn2)) ->
                    case dname1 == dname2 of 
                        True  -> do 
                            return $ zip dins1 dins2
-                       False -> do 
-                           let 
-                             emsg = "\nExpected data type <<"
-                                    ++ showError texpr1 ++ ">> instead got <<" ++ showError texpr2 
-                                    ++ ">> " ++ printPosn dposn2 
-                           Left emsg  
+                       False ->  
+                           Left $ matchError (texpr1,texpr2)   
 
               (TypeCodataType (cname1,dins1,dposn1),TypeCodataType (cname2,dins2,dposn2)) ->
                    case cname1 == cname2 of 
-                       True  -> do 
+                       True  ->  
                            return $ zip dins1 dins2
-                       False -> do 
-                           let 
-                             emsg = "\nExpected codata type "
-                                    ++ show texpr1 ++ ">> instead got <<" ++ show texpr2
-                                    ++ ">>" ++ printPosn dposn2 
-                           Left emsg  
+                       False ->  
+                           Left $ matchError (texpr1,texpr2) 
 
               (TypeProd (prods1,posn1),TypeProd (prods2,posn2)) -> do 
                    let 
                      len1 = length prods1
                      len2 = length prods2
                    case len1 == len2 of 
-                       True  -> do 
+                       True  ->  
                            return $ zip prods1 prods2
                        False -> do 
                            let 
-                             emsg = "Expecting a tuple of length <<" ++ show len1 ++
-                                    ">> instead got one with length <<" ++ 
-                                     show len2 ++ ">>" 
+                             emsg = "Expecting a tuple of length " ++ show len1 
+                                      ++ ", <<" ++ showError texpr1 ++ 
+                                     ">> instead got one with length " ++ 
+                                     show len2 ++ "\n" ++ matchError (texpr1,texpr2)
                            Left emsg  
 
               (TypeConst (bt1,posn1),TypeConst (bt2,posn2)) ->
@@ -122,18 +121,16 @@ matchStructure (texpr1,texpr2)
                        True  -> 
                            return [] 
                        False -> do
-                           let 
-                             emsg = "Expecting the base types <<"
-                                    ++ show bt1 ++ ">> instead got <<" 
-                                    ++ show bt2 ++ ">>" 
-                           Left emsg          
+                           Left $ matchError (texpr1,texpr2)   
 
               otherwise -> do 
-                  let 
-                    emsg = "\nExpecting the type <<" ++ showError texpr1
-                            ++ ">> instead got the type <<" ++ printTypePn texpr2
-                  Left emsg    
+                  Left $ matchError (texpr1,texpr2)    
 
+
+matchError :: (Type,Type) -> ErrorMsg
+matchError (texpr1,texpr2)
+        = "\nExpected type <<" ++ showError texpr1 
+           ++ ">> instead got <<" ++ printTypePn texpr2 
 
 showError :: Type -> String
 showError t 
@@ -141,13 +138,30 @@ showError t
               Left emsg ->
                   show t
               Right strType -> 
-                  show newType   
+                  case newType of
+                      TypeProd _ -> show (show newType)
+                      otherwise  -> show newType  
                 where
                   StrFType (_,newType)
                         = strType  
             where
               iType = IntFType (freeVars t,t)  
             
+showErrorFun :: Type -> Type -> (Type,Type)
+showErrorFun t1 t2  
+        = case intTypeToStrType iType of
+              Left emsg ->
+                  (t1,t2)
+              Right strType -> 
+                  ((head ins),out)
+                where  
+                  StrFType (_,newType)
+                        = strType  
+                  TypeFun (ins,out,pn)
+                        = newType      
+    where
+       tFun  = TypeFun ([t1],t2,(0,0))
+       iType = IntFType (freeVars t1 ++ freeVars t2,tFun)
 
 
 

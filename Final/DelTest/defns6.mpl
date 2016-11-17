@@ -9,16 +9,15 @@ data List(A) -> C = Nil  ::   -> C
 data Tree (A) -> C = Leaf  :: A  -> C
                      Node  :: C,C -> C 
 
-fun flattenTree =
+fun append :: [A],[A] -> [A] = 
+   []    , ys     -> ys 
+   (x:xs), ys    -> (x:(append (xs,ys))) 
+
+fun flattenTree :: Tree (T0) -> [T0] =
     t -> fold t of 
         Leaf : val   = [val] 
-        Node : t1,t2 = let append (t1,t2) 
-                         where
-                           fun append = 
-                               []   , ys     -> ys 
-                               (x:xs), ys    -> (x:(append (xs,ys))) 
-
-
+        Node : t1,t2 = append (t1,t2) 
+                       
 
 defn of
    fun mfun1 =

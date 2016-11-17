@@ -373,7 +373,7 @@ takeCareofFunDefns []    = do
 takeCareofFunDefns defns = do
         (startNum,_,_,_) <- get  
         typeThings <- genNewVarList (length defns)
-        assignSkelTypes defns
+        skelVars   <- assignSkelTypes defns
         finEqns    <- genFunDefnListEqns defns typeThings         
         let 
           solEqn  = solveEqns finEqns
@@ -470,7 +470,7 @@ takeCareofFunDefn defn@(FunctionDefn (fname,mfunType,pattTermList,posn)) = do
                             let
                               emsg = "\n" ++ "Type Mistmatch : In function <<" ++
                                       show fname ++ ">> defined" ++ printPosn posn
-                                      ++ "\n\n" ++ errormsg   
+                                      ++ "\n\n" ++ errormsg ++ "\n" 
                               errDefn 
                                    = FunctionDefn (fname,NoType,pattTermList,posn)
                             errEqns <- genFunDefnEqns errDefn "norm" 
@@ -501,6 +501,7 @@ takeCareofFunDefn defn@(FunctionDefn (fname,mfunType,pattTermList,posn)) = do
 
                         Right logpack -> do  
                              return ([defn],logpack,funEqns)
+
 
 
 genFunDefnEqns :: Defn -> String -> 
@@ -571,18 +572,20 @@ takeCareofFun defn = do
 
 
 {- This function is tailor made for the mutual case -}
-genFunDefnListEqns :: [Defn] -> [TypeThing] ->
+genFunDefnListEqns :: [Defn] -> [TypeThing] -> 
                       EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) [TypeEqn]
-genFunDefnListEqns [] []  
-        = return []
+genFunDefnListEqns [] [] 
+        = return  []
 
-genFunDefnListEqns (d:ds) (tthing:trest) = do 
+genFunDefnListEqns (d:ds) (tthing:trest)  = do 
        (_,_,context,symTab) <- get 
        modify $ \(n,tt,c,st) -> (n,tthing,c,st)
-       dEqns  <- genFunDefnEqns d "mut" 
+       dEqns  <- genFunDefnEqns d "mut"  
        modify $ \(n,tt,c,st) -> (n,tt,context,st)
-       dsEqns <- genFunDefnListEqns ds trest
+       dsEqns <- genFunDefnListEqns ds trest 
        return $ combineEqns (dEqns++dsEqns)
+
+
 
 
 -- ==================================================================================
@@ -593,52 +596,43 @@ genFunDefnListEqns (d:ds) (tthing:trest) = do
 -- used in the skeleton type along with total number of variable that each line in function
 -- i.e pattern and term on the right would have to generate.
 assignSkelType :: Defn ->
-                  EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) ()
+                  EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) [TypeThing]
                                    
-assignSkelType (FunctionDefn (fname,fType,pattTerms,fPosn)) = do 
+assignSkelType oDefn@(FunctionDefn (fname,fType,pattTerms,fPosn)) = do 
         (_,typeFunDefn,context,symTab) <- get
-        case fType of 
-            StrFType gFunType -> do 
-                insFunType <- renameFunType fType 
-                let 
-                  funDefn = FunctionDefn (fname,insFunType,pattTerms,fPosn)
-                  newST   = insert_ST [funDefn] symTab OldScope
-                modify $ \(n,tt,c,st) -> (n,typeFunDefn,context,newST) 
-                return () 
-            otherwise -> do 
-                let 
-                  fstPTerm = head pattTerms
-                  ((fstPatts,fstTerm),fstPosn)
-                           = fstPTerm
-                  nargs    = length fstPatts  
-                skelVars <- genNewVarList (nargs +1)
-                let 
-                  (outSkel:inSkel)
-                          = skelVars
-                  skelFun = TypeFun 
-                                  ( map TypeVarInt inSkel,
-                                    TypeVarInt outSkel,
-                                    fstPosn
-                                  ) 
-                  fstFunType
-                          = IntFType ([],skelFun)
-                  funDefn = FunctionDefn (fname,fstFunType,pattTerms,fPosn)
-                  newST   = insert_ST [funDefn] symTab OldScope
-                modify $ \(n,tt,c,st) -> (n,typeFunDefn,context,newST)
-                return ()
+        let 
+          fstPTerm = head pattTerms
+          ((fstPatts,fstTerm),fstPosn)
+                   = fstPTerm
+          nargs    = length fstPatts  
+        skelVars <- genNewVarList (nargs +1)
+        let 
+          outSkel:inSkel 
+                  =  skelVars
+          skelFun = TypeFun 
+                          ( map TypeVarInt inSkel,
+                            TypeVarInt outSkel,
+                            fstPosn
+                          ) 
+          fstFunType
+                  = IntFType ([],skelFun)
+          funDefn = FunctionDefn (fname,fstFunType,pattTerms,fPosn)
+          newST   = insert_ST [funDefn] symTab OldScope
+        modify $ \(n,tt,c,st) -> (n,typeFunDefn,context,newST)
+        return skelVars
 
                  
 
 
 assignSkelTypes :: [Defn] -> 
-                   EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) () 
+                   EitherT ErrorMsg (State (Int,TypeThing,Context,SymbolTable)) [TypeThing] 
                                     
 assignSkelTypes []
-        = return ()
+        = return []
 assignSkelTypes (d:ds) = do 
-        assignSkelType d 
-        assignSkelTypes ds 
-        return ()
+        sv  <- assignSkelType d 
+        svs <- assignSkelTypes ds 
+        return $ sv ++ svs
 
 -- =========================================================================================
 -- ========================================================================================= 
@@ -798,28 +792,6 @@ handleGuardedHelper pattEqns varRight ((lTerm,rTerm):rest) = do
 -- ===================================================================================
 -- =================================================================================== 
 
-getDefnPosn :: Defn -> PosnPair
-getDefnPosn defn 
-        = case defn of 
-              Data (_,pn)   -> pn 
-              Codata (_,pn) -> pn 
-              TypeSyn (_,pn)-> pn      
-              ProtocolDefn  (_,pn) -> pn 
-              CoprotocolDefn(_,pn) -> pn 
-              FunctionDefn (_,_,_,pn) -> pn 
-              ProcessDefn (_,_,_,pn) -> pn 
-
-
--- ===================================================================================
--- =================================================================================== 
-{-
-FuncName - Funcion Type
-FunType - Original Type given to the function
-[TypeThing] - Variables used in the skeleton
-Int - Total number of arguments + 1 for the output
-TypeEqn - lowest eqn)
-
--}
 
 genPattTermListFunc :: [(PatternTermPhr,PosnPair)] -> 
                        (FuncName,PosnPair,FunType) ->
@@ -834,10 +806,6 @@ genPattTermListFunc pattTerms (fname,fposn,fType) = do
                 left emsg 
             Right valRet -> do 
                 let 
-                  remove_TVarInt :: Type -> Int 
-                  remove_TVarInt (TypeVarInt n) = n
-                  remove_TVarInt sthg = error $ "Not expecting hahah\n" ++ show sthg 
-
                   ValRet_Fun (skelFunType,numins)
                         = valRet
                   IntFType (pars,funType)
@@ -871,7 +839,6 @@ genPattTermListFunc pattTerms (fname,fposn,fType) = do
                       
                     otherwise ->
                         return [totEqn]
-
 
 
 genEqnsPattTermFunType :: (PatternTermPhr,PosnPair) -> ([Int],Int) -> 
@@ -909,6 +876,8 @@ helperEqnsPattern (skelVars,nVars) (fstPattTerm:restPatts) = do
           fstPattEqns = TQuant ([],pattVars) (eqnsEquality ++ eqnsNonEquality)
         remPattEqns <- helperEqnsPattern (skelVars,nVars) restPatts 
         return $ (fstPattEqns:remPattEqns)
+
+
 
 
 

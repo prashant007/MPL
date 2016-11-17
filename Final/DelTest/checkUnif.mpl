@@ -14,15 +14,14 @@ data List(A) -> C = Nil  ::   -> C
                     Cons :: A,C -> C 
 
 defn of
-
-    fun occursCheck :: UnifData,UnifData -> Bool =
+    fun occursCheck :: UnifData, UnifData-> Bool  =
         Var(num),ud -> case ud of 
             Var (n) -> 
                 True 
             Funs (fn,uds) ->
-                ocheckList (Var(num) ,True)  
+                ocheckList (Var(num) ,uds)  
 
-    fun ocheckList  =
+    fun ocheckList :: UnifData, [UnifData]-> Bool  =
         v,[]   -> True
         v,u:us -> occursCheck (v,u) && ocheckList (v,us)  
 

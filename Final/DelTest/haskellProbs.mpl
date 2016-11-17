@@ -11,7 +11,7 @@ data Bool -> C = True  :: -> C
 data Tree (A) -> C  = Empty  :: -> C
                       Branch :: A,C,C -> C 
 
-fun myLast  = 
+fun myLast = 
     []     -> Nothing 
     [x]    -> Just (x) 
     (x:xs) -> myLast (xs) 

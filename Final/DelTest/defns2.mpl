@@ -14,13 +14,13 @@ data Bool -> C = True  :: ->  C
 
 data Pair (A,B) -> C = Pair :: A,B -> C 
 
-fun zipfun :: List(A),List(B) -> List (<A,B>) = 
+fun zipfun :: [A],[B] -> [<A,B>] = 
     []    ,[]      -> []
     (x:xs),(y:ys)  -> (<x,y>:zipfun (xs,ys)) 
 
 
 fun last2Elms  = 
-    x:y:z:[] -> <x,y,z>
+    x:y:z:[] -> <y,y,z>
     (z:xs)   -> last2Elms (xs)   
 
 
