@@ -1,0 +1,25 @@
+
+coprotocol CP => Console =
+        GetIntC   :: CP => Get (Int|TopBot)  
+        PutIntC   :: CP => Put (A|CP) 
+        CloseC    :: CP => Bot  
+
+protocol IntTerm => P =
+        GetInt   :: Get (A|P) => P 
+        PutInt   :: Put (A|P) => P
+        Close    :: Top       => P  
+
+
+
+data Bool -> C = False ::  -> C 
+                 True  ::  -> C 
+
+run console => intTerm1 -> do 
+           hput GetInt on intTerm1
+           get num1 on intTerm1
+           hput GetInt on intTerm1
+           get num2 on intTerm1
+           hput Close on intTerm1 
+           close intTerm1
+           hput CloseC on console
+           halt console  

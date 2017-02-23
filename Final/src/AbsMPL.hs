@@ -35,9 +35,7 @@ newtype TokPutProt = TokPutProt ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 newtype TokNeg = TokNeg ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
-newtype TokTop = TokTop ((Int,Int),String)
-  deriving (Eq, Ord, Show, Read)
-newtype TokBot = TokBot ((Int,Int),String)
+newtype TokTopBot = TokTopBot ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 newtype TokFun = TokFun ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
@@ -91,7 +89,7 @@ newtype Infix4op = Infix4op String deriving (Eq, Ord, Show, Read)
 newtype Infix5op = Infix5op String deriving (Eq, Ord, Show, Read)
 newtype Infix6op = Infix6op String deriving (Eq, Ord, Show, Read)
 newtype Infix7op = Infix7op String deriving (Eq, Ord, Show, Read)
-data MPL = MPLPROG [MPLstmt] RUNstmt | MPLTest [MPLstmt]
+data MPL = MPLPROG [MPLstmt] RUNstmt
   deriving (Eq, Ord, Show, Read)
 
 data MPLstmt
@@ -156,37 +154,22 @@ data TypeN
   deriving (Eq, Ord, Show, Read)
 
 data CTypeDefn
-    = PROTOCOL TokProtocol [ProtocolClause]
-    | COPROTOCOL TokCoprotocol [CoProtocolClause]
+    = PROTOCOL TokProtocol ProtocolClause
+    | COPROTOCOL TokCoprotocol CoProtocolClause
   deriving (Eq, Ord, Show, Read)
 
 data ProtocolClause
-    = PROTOCOLCLAUSE ProtocolTypeSpec UIdent [ProtocolPhrase]
+    = PROTOCOLCLAUSE TypeSpec UIdent [ProtocolPhrase]
   deriving (Eq, Ord, Show, Read)
 
 data CoProtocolClause
-    = COPROTOCOLCLAUSE UIdent ProtocolTypeSpec [CoProtocolPhrase]
+    = COPROTOCOLCLAUSE UIdent TypeSpec [CoProtocolPhrase]
   deriving (Eq, Ord, Show, Read)
 
-data ProtocolTypeSpec
-    = PROTOCOLTYPESPEC_param UIdent [TypeParam] [ProtocolParam]
-    | PROTOCOLTYPESPEC_noparam UIdent
+data ProtocolPhrase = PROTOCOLPHRASE UIdent Protocol UIdent
   deriving (Eq, Ord, Show, Read)
 
-data ProtocolParam = PROTOCOLPARAM UIdent
-  deriving (Eq, Ord, Show, Read)
-
-data ProtocolPhrase = PROTOCOLPHRASE [EventHandle] Protocol UIdent
-  deriving (Eq, Ord, Show, Read)
-
-data CoProtocolPhrase
-    = COPROTOCOLPHRASE [EventHandle] UIdent Protocol
-  deriving (Eq, Ord, Show, Read)
-
-data EventHandle = EVENTHANDLER UIdent
-  deriving (Eq, Ord, Show, Read)
-
-data EventHandleHPUT = EVENTHANDLERHPUT UIdent UIdent
+data CoProtocolPhrase = COPROTOCOLPHRASE UIdent UIdent Protocol
   deriving (Eq, Ord, Show, Read)
 
 data Protocol
@@ -195,10 +178,9 @@ data Protocol
     | PROTOCOLget TokGetProt Type Protocol
     | PROTOCOLput TokPutProt Type Protocol
     | PROTOCOLneg TokNeg Protocol
-    | PROTOCOLtop TokTop
-    | PROTOCOLbot TokBot
-    | ProtcolNamed UIdent [Type] [Protocol]
-    | PROTOCOLvar UIdent
+    | PROTOCOLtopbot TokTopBot
+    | PROTNamedWArgs UIdent [Type]
+    | PROTNamedWOArgs UIdent
   deriving (Eq, Ord, Show, Read)
 
 data FunctionDefn
@@ -272,13 +254,12 @@ data RecordEntry = RECORDENTRY Pattern Term
   deriving (Eq, Ord, Show, Read)
 
 data ProcessDef
-    = PROCESSDEFfull TokProc PIdent [Type] [Protocol] [Protocol] [PatProcessPhr]
-    | PROCESSDEFshort TokProc PIdent [PatProcessPhr]
+    = PROCESSDEFfull TokProc PIdent [Type] [Protocol] [Protocol] PatProcessPhr
+    | PROCESSDEFshort TokProc PIdent PatProcessPhr
   deriving (Eq, Ord, Show, Read)
 
 data PatProcessPhr
-    = PROCESSPHRASEguard [Pattern] [Channel] [Channel] [GuardProcessPhrase]
-    | PROCESSPHRASEnoguard [Pattern] [Channel] [Channel] Process
+    = PROCESSPHRASEnoguard [Pattern] [Channel] [Channel] Process
   deriving (Eq, Ord, Show, Read)
 
 data Process
@@ -292,11 +273,11 @@ data ProcessCommand
     | PROCESS_GET TokGet PIdent Channel
     | PROCESS_HCASE TokHCase Channel [Handler]
     | PROCESS_PUT TokPut Term Channel
-    | PROCESS_HPUT TokHPut EventHandleHPUT Channel
+    | PROCESS_HPUT TokHPut UIdent Channel
     | PROCESS_SPLIT TokSplit Channel [Channel]
     | PROCESS_FORK TokFork PIdent [ForkPart]
     | Process_PLUG [PlugPart]
-    | Procss_ID PChannel PChannel
+    | Procss_ID Channel Channel
     | PROCESScase TokCase Term [ProcessPhrase]
   deriving (Eq, Ord, Show, Read)
 
@@ -304,17 +285,13 @@ data PlugPart
     = PLUGPART_MANY [ProcessCommand] | PLUGPART_ONE ProcessCommand
   deriving (Eq, Ord, Show, Read)
 
-data ForkPart
-    = FORKPARTfull PIdent [Channel] Process
-    | FORKPARTshort PIdent Process
+data ForkPart = FORKPARTshort PIdent Process
   deriving (Eq, Ord, Show, Read)
 
-data Handler = HANDLER EventHandleHPUT Process
+data Handler = HANDLER UIdent Process
   deriving (Eq, Ord, Show, Read)
 
-data ProcessPhrase
-    = CASEPROCESSguard [Pattern] [GuardProcessPhrase]
-    | CASEPROCESSnoguard [Pattern] Process
+data ProcessPhrase = CASEPROCESSnoguard Pattern Process
   deriving (Eq, Ord, Show, Read)
 
 data GuardProcessPhrase

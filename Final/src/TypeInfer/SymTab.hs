@@ -1,10 +1,10 @@
 module TypeInfer.SymTab where
 
 import TypeInfer.MPL_AST
-import TypeInfer.EqGenCommFuns
-import TypeInfer.SymTabDataType
-import TypeInfer.SymTabHelper
-import TypeInfer.SymTabInsert
+import TypeInfer.Gen_Eqns_CommFuns
+import TypeInfer.SymTab_DataType
+import TypeInfer.SymTab_Helper
+import TypeInfer.SymTab_Insert
 
 import Control.Monad.State
 import Control.Monad.Trans.Either
@@ -109,7 +109,7 @@ lookup_HandCohand (name,posn) handCohands = do
           emsg = "No protocol/coprotocol defintion found for handle/cohandle <<"
                  ++ show name  ++ ">> defined " ++ printPosn posn 
 
-        case handCohands == [] of 
+        case handCohands /= [] of 
             True  -> do
                 let 
                   allPairs
@@ -157,9 +157,9 @@ lookup_Fun (name,(line,col)) funDefns = do
 lookup_Proc :: (Name,PosnPair) -> [SymbolDefn] -> Either ErrorMsg ValRet
 lookup_Proc (name,(line,col)) procDefns = do 
         let 
-          emsg = "Function <<" ++ show name ++ ">>  used at (" ++ show line ++ "," ++
+          emsg = "Process <<" ++ show name ++ ">>  used at (" ++ show line ++ "," ++
                  show col ++ ") not in scope.\n"  
-        case procDefns == [] of
+        case procDefns /= [] of
             True  ->  do 
                 let 
                   pdefns 
@@ -237,7 +237,7 @@ insert_helper defns@(d:ds) = do
 
 -- =====================================================================================
 -- =====================================================================================
-
+{-
 -- This function just updates the function type. At some point this function 
 -- needs to take care of process types as well. 
 update_ST :: Defn -> SymbolTable -> Either ErrorMsg SymbolTable
@@ -256,4 +256,4 @@ update_ST_List (d:ds) symTab = do
         newsymTab  <- update_ST  d symTab
         finSymTab  <- update_ST_List ds newsymTab
         return finSymTab
-
+-}

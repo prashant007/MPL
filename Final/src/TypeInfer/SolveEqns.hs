@@ -1,8 +1,8 @@
 module TypeInfer.SolveEqns where
 
 import TypeInfer.MPL_AST 
-import TypeInfer.EqGenCommFuns
-import TypeInfer.UnifyLam  
+import TypeInfer.Gen_Eqns_CommFuns
+import TypeInfer.Unification
 import TypeInfer.SolveHelper 
 
 import Control.Monad.State.Lazy

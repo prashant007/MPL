@@ -1,8 +1,8 @@
 module TypeInfer.SolveHelper where 
 
 import TypeInfer.MPL_AST 
-import TypeInfer.UnifyLam  
-import TypeInfer.EqGenCommFuns
+import TypeInfer.Unification 
+import TypeInfer.Gen_Eqns_CommFuns
 
 import Control.Monad.State.Lazy
 import Control.Monad.Trans.Either
@@ -166,7 +166,8 @@ subst_Packages (subst:rest) packs = do
         subst_Packages rest newPacks
 
 
-subst_Package :: Subst -> [Package] -> [Package] ->  EitherT ErrorMsg (State Log) [Package]
+subst_Package :: Subst -> [Package] -> [Package] -> 
+                 EitherT ErrorMsg (State Log) [Package]
 subst_Package _ [] shunt_packs = return shunt_packs
 
 subst_Package subst@(s,texpr) (p:ps) shunt_packs = do 
@@ -258,44 +259,44 @@ reduce_Package (dcareFVars,uvars,evars,slistRe) = do
                                  
 handle_UVars :: Package ->  Either ErrorMsg Package
 handle_UVars (freeVars,uvars,evars,substList) 
-        = case uvars == [] of 
-              True  ->  
-                   reduce_Package (([],[]),[],evars,substList)
-  
-              False -> do 
-                  let 
-                    (u:us)   = uvars 
-                    uvarsmsg = "Inferred type and given types don't match"
-                  case lookup u substList of
-                      Just texpr -> 
-                          case texpr of 
-                              TypeVarInt v ->
-                                  case u == v of
-                                      True -> do 
-                                          let 
-                                            newList 
-                                              = (delete (u,TypeVarInt u) substList)
-                                            newPack 
-                                              = (([],[]),us,evars,newList)
-                                          handle_UVars newPack
-                                      False -> 
-                                          case elem v evars of 
-                                              True  -> do 
-                                                  let 
-                                                    newSList
-                                                        = (v,TypeVarInt u):
-                                                          (delete (u,TypeVarInt v) substList)
-                                                    newPack
-                                                        = (([],[]),uvars,evars,newSList)      
-                                                  reduce_Package newPack          
-      
-                                                  
-                                              False ->
-                                                  Left uvarsmsg
-                              otherwise ->
-                                  Left uvarsmsg
-                      Nothing -> 
-                           handle_UVars (([],[]),us,evars,substList) 
+    = case uvars == [] of 
+        True  ->  
+          reduce_Package (([],[]),[],evars,substList)
+
+        False -> do 
+          let 
+            (u:us)   = uvars 
+            uvarsmsg = "Inferred type and given types don't match"
+          case lookup u substList of
+            Just texpr -> 
+              case texpr of 
+                TypeVarInt v ->
+                  case u == v of
+                    True -> do 
+                      let 
+                        newList 
+                          = (delete (u,TypeVarInt u) substList)
+                        newPack 
+                          = (([],[]),us,evars,newList)
+                      handle_UVars newPack
+                    False -> 
+                      case elem v evars of 
+                          True  -> do 
+                            let 
+                              newSList
+                                  = (v,TypeVarInt u):
+                                    (delete (u,TypeVarInt v) substList)
+                              newPack
+                                  = (([],[]),uvars,evars,newSList)      
+                            reduce_Package newPack          
+
+                              
+                          False ->
+                            Left uvarsmsg
+                otherwise ->
+                    Left uvarsmsg
+            Nothing -> 
+                 handle_UVars (([],[]),us,evars,substList) 
 
 -- ==========================================================================
 -- ==========================================================================
@@ -318,8 +319,8 @@ commonSubsFun slist (e:es) = do
                         coaEList <- coalesce_Evar (head subs,remSList) 
                         commonSubsFun coaEList es 
             Nothing -> 
-                Left $ "Can't Find existential variable <<" ++ show e ++ ">> in \n" ++
-                       show slist                
+                Left $ "Can't Find existential variable <<" 
+                       ++ show e ++ ">> in \n" ++ show slist                
 
 -- ==========================================================================
 -- ==========================================================================

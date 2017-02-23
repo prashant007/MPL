@@ -1,9 +1,9 @@
 data List (A) -> D =   Nil  ::     -> D
                        Cons :: A,D -> D   
 
-protocol IntTerm (A|) => P =
-              GetInt   :: Get (A|P) => P 
-              PutInt   :: Put (A|P) => P
+protocol IntTerm  => P =
+              GetInt   :: Get (Int|P) => P 
+              PutInt   :: Put (Int|P) => P
               Close    :: Top       => P  
 
 coprotocol CP => Console (A|) =
@@ -18,7 +18,7 @@ fun &+ :: List(Nat) -> List(Nat) =
                       default = guardFunc(xs) 
 
 
-proc printList1 :: List(A) | Console (A|) => IntTerm (A|) = 
+proc printList1 :: List(A) | Console => IntTerm = 
     Nil        | console => intTerm1 -> do  
                      hput IntTerm.Close on intTerm1
                      close intTerm1

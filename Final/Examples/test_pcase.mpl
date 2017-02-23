@@ -11,8 +11,6 @@ coprotocol CP => Console (A|) =
 data Bool -> C = False :: () -> C 
                  True  :: () -> C 
 
-
-
 run console => intTerm1 -> do 
            hput IntTerm.GetInt on intTerm1
            get num1 on intTerm1

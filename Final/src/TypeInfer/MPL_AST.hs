@@ -11,7 +11,6 @@ type Process        = [ProcessCommand]
 type PosnPair       = (Int,Int)
 type TypeParam      = String
 type ProtocolParam  = String
-type EventHandleHPut= (String,String)
 type TypeSynonym    = (Name,Type)
 type Param          = String
 
@@ -23,17 +22,14 @@ data DataName       = DataName (Name,[Param])
                      deriving (Eq,Show,Generic) 
 
 instance () => Out (DataName)
-
-type ProtocolClause = (ProtocolSpec,[ProtocolPhrase])
-type ProtocolSpec   = (Name,[TypeParam],[ProtocolParam])
-type ProtocolPhrase = (Name,Protocol)
+type ProtName       = DataName 
+type ProtocolClause = (ProtName,[ProtocolPhrase])
+type ProtocolPhrase = (Name,FunType)
 
 type InfixSym       = String
 
 type InputType      = [Type]
 type OutputType     = Type
-
-type ProcessType    = ([Type],[Protocol],[Protocol])
 
 -- [String] is the list of existentially quantified variables.
 data FunType        =  NoType 
@@ -51,91 +47,143 @@ instance Show FunType where
     show (NoType) 
         = "noType"
       
-type PatternTermPhr = ([Pattern],Either Term [GuardedTerm])
-type GuardedTerm    = (Term,Term)
+type PatternTermPhr 
+      = ([Pattern],Either Term [GuardedTerm])
+
+type GuardedTerm    
+      = (Term,Term)
+
+type FoldPattern    
+      = (Name,[Pattern],Term,PosnPair)
+
+type ErrorMsg 
+      = String
+
+type NumArgs
+      = Int 
 
 
-type FoldPattern    = (Name,[Pattern],Term,PosnPair)
-type ErrorMsg       = String
-type NumArgs        = Int 
+type PattProcessPhr 
+    = (
+        [Pattern],[PChannel],[PChannel],Process
+      )
 
+type GuardedProc = (Term,Process)
+type PattProc    = (Pattern,Process)
+type Name        = String
 
-type PattProcessPhr = (
-                        [Pattern],[PChannel],[PChannel],
-                        Either GuardedProcPhrase Process
-                      )
-
-type GuardedProcPhrase  = (Term,Process)
-
-type Name = String
-
-
-data Protocol =  Get (Type,Protocol,PosnPair) 
-               | Put (Type,Protocol,PosnPair)
-               | Neg (Protocol,PosnPair)
-               | Top PosnPair
-               | Bot PosnPair
-               | ProtNamed (String,([Type],[Protocol]),PosnPair)
-               | ProtVar   (String,PosnPair)
-               | ProtTensor (Protocol,Protocol,PosnPair)
-               | ProtPar    (Protocol,Protocol,PosnPair)
-               deriving (Eq,Show,Generic)
-
-instance () => Out (Protocol)
-
-data Type =  Unit PosnPair
-           | TypeDataType (String,[Type],PosnPair)
-           | TypeCodataType (String,[Type],PosnPair)
-           | TypeProd ([Type],PosnPair)
-           | TypeConst (BaseType,PosnPair)
-           | TypeVar   (String,PosnPair)
-           | TypeVarInt Int
-           | TypeFun   ([Type],Type,PosnPair)
-           deriving (Generic)
+data Type =  
+       Unit PosnPair
+     | TypeDataType (String,[Type],PosnPair)
+     | TypeCodataType (String,[Type],PosnPair)
+     | TypeProd ([Type],PosnPair)
+     | TypeConst (BaseType,PosnPair)
+     | TypeVar   (String,PosnPair)
+     | TypeVarInt Int
+     | TypeFun   ([Type],Type,PosnPair)
+     | Get (Type,Type,PosnPair)
+     | Put (Type,Type,PosnPair)
+     | Neg (Type,PosnPair)
+     | TopBot PosnPair
+     | ProtNamed  (String,[Type],PosnPair)
+     | CoProtNamed(String,[Type],PosnPair)
+     | ProtTensor (Type,Type,PosnPair)
+     | ProtPar    (Type,Type,PosnPair)
+     | ProtProc ([Type],[Type],[Type],PosnPair)
+    deriving (Generic)
 
 
 instance () => Out (Type)
 
 instance Show Type where
-  show (Unit _) = "Unit" 
+  show (Unit _) 
+      = "Unit" 
+
   show (TypeVar (x,posn))
-        = x 
+      = x 
+
   show (TypeVarInt n)
-        = show n 
+      = show n 
+
   show (TypeConst (btype,posn))
-        = printConst btype
+      = printConst btype
+
   show (TypeDataType (dname,types,posn))
-        = case length types /= 0 of
-              True ->
-                 case dname == "List" of 
-                     True  -> "[" ++ (intercalate ",".map show) types ++
-                              "]"
-                     False ->
-                        dname ++ "(" ++ 
-                        (intercalate ",".map show) types ++ ")"
-              False ->
-                 dname   
+      = case length types /= 0 of
+            True ->
+               case dname == "List" of 
+                   True  -> 
+                      "[" ++ 
+                      (intercalate ",".map show) types ++
+                      "]"
+                   False ->
+                      dname ++ "(" ++ 
+                      (intercalate ",".map show) types ++ ")"
+            False ->
+               dname 
+
   show (TypeCodataType (cname,types,posn))
-        = case length types /= 0 of
-              True ->
-                 case cname == "Exp" of 
-                     True  -> 
-                         "(" ++ show (head types) ++ "=>" 
-                         ++ show (last types) ++ ")"
-                     False ->
-                         cname ++
-                         "(" ++ (intercalate ",".map show) types ++ ")"
-              False ->
-                 cname 
+      = case length types /= 0 of
+            True ->
+               case cname == "Exp" of 
+                   True  -> 
+                       "(" ++ show (head types) ++ "=>" 
+                       ++ show (last types) ++ ")"
+                   False ->
+                       cname ++ "(" ++
+                       (intercalate ",".map show) types 
+                       ++ ")"
+            False ->
+               cname 
   
   show (TypeProd (prods,posn))
-        = "<" ++ intercalate "," (map show prods) ++ ">"
+      = "<" ++ intercalate "," (map show prods) ++ ">"
 
 
   show (TypeFun (ins,out,posn))
-                      =  (intercalate ", " .map show) ins ++ 
-                         "-> " ++ show out 
+      =  (intercalate ", " .map show) ins ++ 
+         "-> " ++ show out 
 
+  show (Get (t1,t2,_)) 
+      = "Get (" ++ show t1 ++ "|" 
+        ++ show t2 ++ ")"
+
+  show (Put (t1,t2,_)) 
+      = "Put (" ++ show t1 ++ "|" ++ 
+        show t2 ++ ")"
+
+  show (Neg (t,_)) 
+      = "Neg (" ++ show t ++ ")"
+
+  show (TopBot _) 
+      = "TopBot"
+
+  show (ProtNamed  (str,types,pn)) 
+      = case length types /= 0 of
+            True ->
+                str ++ "(" ++ 
+                (intercalate ",".map show) types ++ ")"
+            False ->
+               str  
+
+  show (CoProtNamed (str,types,pn)) 
+      = case length types /= 0 of
+            True ->
+                str ++ "(" ++ 
+                (intercalate ",".map show) types ++ ")"
+            False ->
+               str  
+
+  show (ProtTensor (t1,t2,_)) 
+      = show t1 ++ "(*)" ++ show t2 
+
+  show (ProtPar    (t1,t2,_)) 
+      = show t1 ++ "(+)" ++ show t2 
+
+  show (ProtProc (seqs,ips,ops,_)) 
+      = (intercalate ", " .map show) seqs ++ " | " ++
+        (intercalate ", " .map show) ips ++ " => " ++ 
+        (intercalate ", " .map show) ops
 
 printConst :: BaseType -> String
 printConst btype 
@@ -147,31 +195,66 @@ printConst btype
 
 
 instance Eq Type where
-  Unit _ == Unit _ = True 
+    Unit _ == Unit _ = True 
 
-  TypeDataType (n1,t1,posn1) == TypeDataType (n2,t2,posn2)
-          = (n1 == n2) && (and (zipWith (\x y -> x == y) t1 t2 ))
+    TypeDataType (n1,t1,posn1) == TypeDataType (n2,t2,posn2)
+        = (n1 == n2) && 
+          (and (zipWith (\x y -> x == y) t1 t2 ))
 
-  TypeCodataType (n1,t1,posn1) == TypeCodataType (n2,t2,posn2)
-          = (n1 == n2) && (and (zipWith (\x y -> x == y) t1 t2 ))
-  
-  TypeProd (t1s,posn1) == TypeProd (t2s,posn2) 
-          = and (zipWith (\x y -> x == y) t1s t2s) 
+    TypeCodataType (n1,t1,posn1) == TypeCodataType (n2,t2,posn2)
+        = (n1 == n2) && 
+          (and $ zipWith (\x y -> x == y) t1 t2 )
+    
+    TypeProd (t1s,posn1) == TypeProd (t2s,posn2) 
+        = and (zipWith (\x y -> x == y) t1s t2s) 
 
-  TypeConst (bt1,posn1) == TypeConst (bt2,posn2)
-          = (bt1 == bt2) 
-  
-  TypeVar (v1,posn1) == TypeVar(v2,posn2)
-          = v1 == v2 
+    TypeConst (bt1,posn1) == TypeConst (bt2,posn2)
+        = (bt1 == bt2) 
+    
+    TypeVar (v1,posn1) == TypeVar(v2,posn2)
+        = v1 == v2 
 
-  TypeVarInt v1 == TypeVarInt v2
-          = v1 == v2 
+    TypeVarInt v1 == TypeVarInt v2
+        = v1 == v2 
 
-  TypeFun (ins1,out1,posn1) == TypeFun (ins2,out2,posn2)
-          = and (zipWith (\x y -> x == y) (out1:ins1) (out2:ins2))                                
-  
-  rem1 == rem2 = False 
+    TypeFun (ins1,out1,posn1) == TypeFun (ins2,out2,posn2)
+        = and $ zipWith (\x y -> x == y) 
+                        (out1:ins1)
+                        (out2:ins2) 
 
+    Get (t11,t12,_) == Get (t21,t22,_)
+        = t11 == t21 && t12 == t22  
+
+    Put (t11,t12,_) == Put (t21,t22,_) 
+        = t11 == t21 && t12 == t22  
+
+    Neg (p1,_) == Neg (p2,_) 
+        = p1 == p2 
+
+    TopBot _ == TopBot _
+        = True 
+
+    ProtNamed  (str1,ts1,_) == ProtNamed (str2,ts2,_)
+        = str1 == str2 && (and.zipWith (==) ts1) ts2   
+
+    CoProtNamed(str1,ts1,_) == CoProtNamed (str2,ts2,_)
+        = str1 == str2 && (and.zipWith (==) ts1) ts2
+
+    ProtTensor (p10,p11,_) == ProtTensor (p20,p21,_)
+        = p10 == p20 && p11 == p21
+
+    ProtPar (p10,p11,_) == ProtPar (p20,p21,_)
+        = p10 == p20 && p11 == p21
+
+    ProtProc (seqs1,inps1,outps1,_) == ProtProc (seqs2,inps2,outps2,_)
+        = ((and.zipWith (==) seqs1) seqs2) &&
+          ((and.zipWith (==)inps1)  inps2) &&
+          ((and.zipWith (==)outps1) outps2)                                       
+    
+    rem1 == rem2 
+        = False 
+
+   
 
 data BaseType =  BaseInt 
                | BaseChar
@@ -191,7 +274,6 @@ data Pattern =   ConsPattern (String,[Pattern],PosnPair)
                deriving (Eq,Show,Generic)
 
 instance () => Out (Pattern)
-
 
 data Term =  TRecord [(Pattern,Term,PosnPair)]
            | TCallFun (FuncName,[Term],PosnPair)  
@@ -239,23 +321,25 @@ instance Show FuncName where
 instance () => Out (FuncName)
 
 
-data ProcessCommand =  PRun   (Name,[Term],[PChannel],[PChannel],PosnPair)
-                     | PClose (PChannel,PosnPair) 
-                     | PHalt  (PChannel,PosnPair)
-                     | PGet   (String,PChannel,PosnPair)
-                     | PPut   (String,PChannel,PosnPair)
-                     | PHPut  (EventHandleHPut,PChannel,PosnPair)
-                     | PHCase (PChannel,[(EventHandleHPut,Process,PosnPair)])
-                     | PSplit (PChannel,(PChannel,PChannel),PosnPair)
-                     | PFork  (String,[(String,[PChannel],Process,PosnPair)])
-                     | PPlug  [(Process,PosnPair)]
-                     | PId    (PChannel,PChannel,PosnPair)
-                     deriving (Eq,Show,Generic)
+data ProcessCommand 
+    =  PRun   (Name,[Term],[PChannel],[PChannel],PosnPair)
+     | PClose (PChannel,PosnPair) 
+     | PHalt  (PChannel,PosnPair)
+     | PGet   (Pattern,PChannel,PosnPair)
+     | PPut   (Term,PChannel,PosnPair)
+     | PHPut  (Name,PChannel,PosnPair)
+     | PHCase (PChannel,[(Name,Process,PosnPair)],PosnPair)
+     | PSplit (PChannel,(PChannel,PChannel),PosnPair)
+     | PFork  (String,[(PChannel,Process)],PosnPair)
+     | PPlug  ([PChannel],(Process,Process),PosnPair)
+     | PId    (PChannel,PChannel,PosnPair)
+     | PCase  (Term,[PattProc],PosnPair)
+     deriving (Eq,Show,Generic)
 
 instance () => Out (ProcessCommand)
 
 data Stmt =  DefnStmt ([Defn],[Stmt],PosnPair)
-           | RunStmt (Maybe ProcessType,[PChannel],[PChannel],Process,PosnPair) 
+           | RunStmt (FunType,[PChannel],[PChannel],Process,PosnPair) 
            deriving (Eq,Show,Generic)
 
 instance () => Out (Stmt)
@@ -279,15 +363,19 @@ type InfixFun  = (String,String,String)
 
 
 
-data Defn =   Data    ([DataClause],PosnPair)
-            | Codata  ([DataClause],PosnPair)
-            | TypeSyn ([TypeSynonym],PosnPair)   
-            | ProtocolDefn   ([ProtocolClause],PosnPair)
-            | CoprotocolDefn ([ProtocolClause],PosnPair)
-            | FunctionDefn (FuncName,FunType,[(PatternTermPhr,PosnPair)],PosnPair)
-            | ProcessDefn  (Name,Maybe ProcessType,[(PattProcessPhr,PosnPair)],PosnPair)
-            | TermSyn TermSynClause
-            | OperatorDefn (String,Either Int Int,PosnPair)
+data Defn 
+    =   Data    ([DataClause],PosnPair)
+      | Codata  ([DataClause],PosnPair)
+      | TypeSyn ([TypeSynonym],PosnPair)   
+      | ProtocolDefn   ([ProtocolClause],PosnPair)
+      | CoprotocolDefn ([ProtocolClause],PosnPair)
+      | FunctionDefn (
+                       FuncName,FunType,
+                       [(PatternTermPhr,PosnPair)],PosnPair
+                     )
+      | ProcessDefn  (Name,FunType,PattProcessPhr,PosnPair)
+      | TermSyn TermSynClause
+      | OperatorDefn (String,Either Int Int,PosnPair)
 
             deriving (Eq,Show,Generic)  
                 
@@ -322,6 +410,7 @@ data TypeEqn =    TQuant (UniVars,ExistVars) [TypeEqn]
                 deriving (Eq,Show,Generic)
 
 instance () => Out (TypeEqn)
+
 
 type FreeVars  = [Int] 
 type UniVars   = [Int]

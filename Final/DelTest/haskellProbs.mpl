@@ -11,13 +11,12 @@ data Bool -> C = True  :: -> C
 data Tree (A) -> C  = Empty  :: -> C
                       Branch :: A,C,C -> C 
 
-fun myLast = 
-    []     -> Nothing 
+fun myLast  = 
+    []     -> 1 
     [x]    -> Just (x) 
     (x:xs) -> myLast (xs) 
 
 -- 2.Find the last but one element of a list.
-
 fun myButLast = 
     []      -> []
     [x]     -> [] 

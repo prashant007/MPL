@@ -1,12 +1,12 @@
 --example for plugging on multiple channels
 -- **** Get all the types RIGHT
 
-protocol IntTerm (A|) => P =
+protocol IntTerm (A) => P =
               GetInt   :: Get (A|P) => P 
               PutInt   :: Put (A|P) => P
               Close    :: Top       => P  
 
-coprotocol CP => Console (A|) =
+coprotocol CP => Console (A) =
               GetInt   :: CP => Get (A|CP)  
               PutInt   :: CP => Put (A|CP) 
               Close    :: CP => Bot 
