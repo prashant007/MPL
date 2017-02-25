@@ -23,7 +23,7 @@ testFunction mplstmts = do
       eithVal = evalState stEith (1,0,[],[],toBeginSymTab)    
     case eithVal of 
         Left emsg -> 
-            putStrLn $ unlines
+            putStrLnRed $ unlines
                         [
                           "\n",equalS,equalS,emsg,
                           equalS,equalS
@@ -193,14 +193,14 @@ takeCareofStmt stmt
                 return [quadFDefn,quadProcDefn]      
                        
         RunStmt (fType,inchs,outchs,process,pn) -> do 
-          {-
+          
           let 
             procDefn
               = ProcessDefn ("main_run",fType,([],inchs,outchs,process),pn)
           triple <- takeCareofDefn procDefn
           return [triple]
-          -}
-          return [([],[],[])]
+          
+          --return [([],[],[])]
 
 
 

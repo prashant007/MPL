@@ -15,6 +15,7 @@ import Text.PrettyPrint
 import Data.List 
 import Control.Monad.Trans.Either
 import Data.Maybe
+import qualified Data.Set as S 
 
 genEquations_PComm :: ProcessCommand -> 
                       EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
@@ -24,13 +25,13 @@ genEquations_PComm
                        fun_HCase fun_Split fun_Fork fun_Plug fun_Id  
                        fun_PCase                    
 
-genEquations_Proc :: [ProcessCommand] -> [TypeThing] ->
+genEquations_Proc :: [ProcessCommand] -> 
                      EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) [TypeEqn]
-genEquations_Proc [] []
+genEquations_Proc [] 
         = return []
 
-genEquations_Proc (p:[]) (v:[]) = do 
-        modify $ \(n,tt,c,chc,sym) -> (n,v,c,chc,sym)
+genEquations_Proc (p:[]) = do 
+        modify $ \(n,tt,c,chc,sym) -> (n,tt,c,chc,sym)
         (newP,flag) <- genEquations_PComm p
         case flag == 0 of 
             True  -> 
@@ -38,18 +39,20 @@ genEquations_Proc (p:[]) (v:[]) = do
             False -> 
                 return newP  
 
-genEquations_Proc (p:ps) (v:vs) = do 
-        modify $ \(n,tt,c,chc,sym) -> (n,v,c,chc,sym)
+genEquations_Proc (p:ps) = do 
+        modify $ \(n,tt,c,chc,sym) -> (n,tt,c,chc,sym)
         (newP,flag)  <- genEquations_PComm p
         case flag == 0 of
             True  -> do 
-                newPS <- genEquations_Proc ps vs 
-                return (newP ++ newPS) 
+                newPS <- genEquations_Proc ps  
+                return $ combEqns_Proc (newP,newPS) 
             False -> do 
                 left $ 
                   "Not expecting any commands after " 
                   ++ getCommName p
                    
+
+
 
 foldPCommand :: ((Name,[Term],[PChannel],[PChannel],PosnPair) -> b) ->
                 ((PChannel,PosnPair) -> b) -> 
@@ -59,7 +62,7 @@ foldPCommand :: ((Name,[Term],[PChannel],[PChannel],PosnPair) -> b) ->
                 ((Name,PChannel,PosnPair) -> b) ->
                 ((PChannel,[(Name,Process,PosnPair)],PosnPair) -> b) ->
                 ((PChannel,(PChannel,PChannel),PosnPair) -> b) ->
-                ((String,[(String,Process)],PosnPair) -> b) ->
+                ((PChannel,[(PChannel,[PChannel],Process)],PosnPair) -> b) ->
                 (([PChannel],(Process,Process),PosnPair) -> b) ->
                 ((PChannel,PChannel,PosnPair) -> b) ->
                 ((Term,[PattProc],PosnPair) -> b) ->
@@ -156,9 +159,9 @@ fun_Get :: (Pattern,PChannel,PosnPair) ->
            EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
                             ([TypeEqn],EndFlag)
 fun_Get (patt,ch,pn) = do 
-    pattVar <- genNewVar    
+    [pattVar,protGet] <- genNewVarList 2    
     pattEqns <- genPattEquationsList [patt] [pattVar]
-    (_,protGet,_,chCont,symTab) <- get 
+    (_,_,_,chCont,symTab) <- get 
     case lookup ch chCont of 
       Nothing -> 
         left $ 
@@ -209,14 +212,15 @@ fun_Put :: (Term,PChannel,PosnPair) ->
            EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
                             ([TypeEqn],EndFlag)
 fun_Put (term,ch,pn) = do 
-    termVar  <- genNewVar
+    [termVar,protPut]  <- genNewVarList 2
     termEqns <- genEquationsList [term] [termVar]
-    (_,protPut,_,chCont,symTab) <- get 
+    (_,_,_,chCont,symTab) <- get 
     case lookup ch chCont of 
       Nothing -> 
         left $ 
           "Trying to PUT on a channel <<" ++ ch 
           ++ ">>" ++ printPosn pn ++ "that doesn't exist." 
+
       Just pair -> do 
         let 
             delChCon = delete (ch,pair) chCont
@@ -262,7 +266,8 @@ fun_HPut :: (Name,PChannel,PosnPair) ->
            EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
                             ([TypeEqn],EndFlag)
 fun_HPut (handle,ch,pn) = do 
-    (num,typeHPut,_,chCont,symTab) <- get
+    typeHPut <- genNewVar
+    (num,_,_,chCont,symTab) <- get
     -- check if the channel is in the context
     case lookup ch chCont of        
         Nothing -> do 
@@ -276,48 +281,48 @@ fun_HPut (handle,ch,pn) = do
               delChCon = delete (ch,pair) chCont
             case pol of 
                 Out -> do 
-                    let 
-                      lookVal = Val_Prot (handle,pn)
-                    case lookup_ST lookVal symTab of 
-                        Left stEmsg ->
-                            left stEmsg
-                        Right stRetVal -> do
-                            let 
-                              ValRet_Prot (rPNm,rPt) 
-                                     = stRetVal
-                            intFType <- renameFunType rPt          
-                            let 
-                              (univVars,itypes,otype,_)
-                                     = stripFunType rPt pn 0
-                              teqn1  = TSimp (prot,otype)
-                              teqn2  = TSimp (TypeVarInt typeHPut,head itypes) 
-                              finEqn = TQuant ([],typeHPut:univVars) [teqn1,teqn2] 
-                              newCont= (ch,(Out,TypeVarInt typeHPut)):delChCon
+                  let 
+                    lookVal = Val_Prot (handle,pn)
+                  case lookup_ST lookVal symTab of 
+                    Left stEmsg ->
+                      left stEmsg
+                    Right stRetVal -> do
+                      let 
+                        ValRet_Prot (rPNm,rPt) 
+                               = stRetVal
+                      intFType <- renameFunType rPt          
+                      let 
+                        (univVars,itypes,otype,_)
+                               = stripFunType intFType pn 0
+                        teqn1  = TSimp (prot,otype)
+                        teqn2  = TSimp (TypeVarInt typeHPut,head itypes) 
+                        finEqn = TQuant ([],typeHPut:univVars) [teqn1,teqn2] 
+                        newCont= (ch,(Out,TypeVarInt typeHPut)):delChCon
 
-                            modify $ \(n,tt,c,chC,sym) -> (n,tt,c,newCont,sym)
-                            return ([finEqn],0)                                                       
+                      modify $ \(n,tt,c,chC,sym) -> (n,tt,c,newCont,sym)
+                      return ([finEqn],0)                                                       
 
                 In  -> do   
-                    let 
-                      lookVal = Val_Coprot (handle,pn)
-                    case lookup_ST lookVal symTab of 
-                        Left stEmsg ->
-                            left stEmsg
-                        Right stRetVal -> do
-                            let 
-                              ValRet_Coprot (rPNm,rPt) 
-                                    = stRetVal
-                            intFType <- renameFunType rPt 
-                            let
-                              (univVars,itypes,otype,_)
-                                     = stripFunType rPt pn 0
-                              teqn1  = TSimp (prot, otype)
-                              teqn2  = TSimp(TypeVarInt typeHPut,head itypes) 
-                              finEqn = TQuant ([],typeHPut:univVars) [teqn1,teqn2] 
-                              newCont= (ch,(In,TypeVarInt typeHPut)):delChCon
-                              
-                            modify $ \(n,tt,c,chC,sym) -> (n,tt,c,newCont,sym)
-                            return ([finEqn],0)   
+                  let 
+                    lookVal = Val_Coprot (handle,pn)
+                  case lookup_ST lookVal symTab of 
+                    Left stEmsg ->
+                      left stEmsg
+                    Right stRetVal -> do
+                      let 
+                        ValRet_Coprot (rPNm,rPt) 
+                              = stRetVal
+                      intFType <- renameFunType rPt 
+                      let
+                        (univVars,itypes,otype,_)
+                               = stripFunType intFType pn 0
+                        teqn1  = TSimp (prot, otype)
+                        teqn2  = TSimp(TypeVarInt typeHPut,head itypes) 
+                        finEqn = TQuant ([],typeHPut:univVars) [teqn1,teqn2] 
+                        newCont= (ch,(In,TypeVarInt typeHPut)):delChCon
+                        
+                      modify $ \(n,tt,c,chC,sym) -> (n,tt,c,newCont,sym)
+                      return ([finEqn],0)   
 
 -- ======================================================================
 -- ======================================================================
@@ -326,7 +331,7 @@ fun_HCase ::(PChannel,[(Name,Process,PosnPair)],PosnPair) ->
             EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
                 ([TypeEqn],EndFlag) 
 fun_HCase (ch,tripList,pn) = do 
-    (num,typeHCase,_,chCont,symTab) <- get
+    (num,_,_,chCont,symTab) <- get
     -- check if the channel is in the context
     case lookup ch chCont of        
         Nothing -> do 
@@ -338,22 +343,22 @@ fun_HCase (ch,tripList,pn) = do
         Just pair@(pol,prot) -> do 
             let 
               delChCon = delete (ch,pair) chCont
-              newCont  = (ch,(pol,TypeVarInt typeHCase)):delChCon
-            retEqns <- handle_Hcase tripList (ch,pol,prot) (newCont,typeHCase)
-            modify $ \(n,tt,c,chC,sym) -> (n,tt,c,newCont,sym)
+              --newCont  = (ch,(pol,TypeVarInt typeHCase)):delChCon
+            modify $ \(n,tt,c,chC,sym) -> (n,tt,c,delChCon,sym)
+            retEqns <- handle_Hcase tripList (ch,pol,prot) 
             return (retEqns,1)
 
               
 
 handle_Hcase :: [(Name,Process,PosnPair)] -> (PChannel,Polarity,Type) ->
-                (ChanContext,ExistVar) -> 
                 EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
                   [TypeEqn]     
-handle_Hcase [] _ _ 
+handle_Hcase [] _ 
     = return []
 
-handle_Hcase ((handle,procs,pn):rs) (ch,pol,prot) (chanCont,hcase) = do 
-    (_,_,_,_,symTab) <- get
+handle_Hcase ((handle,procs,pn):rs) (ch,pol,prot) = do 
+    (_,_,context,delChCon,symTab) <- get
+    typeHCase <- genNewVar
     case pol of 
         In -> do
             let 
@@ -361,27 +366,36 @@ handle_Hcase ((handle,procs,pn):rs) (ch,pol,prot) (chanCont,hcase) = do
             case lookup_ST lookVal symTab of 
                 Left stEmsg ->
                     left stEmsg
-                Right stRetVal -> do
-                    newVars  <- genNewVarList (length procs)
-                    eqnProcs <- genEquations_Proc procs newVars
+                Right stRetVal -> do                   
                     let 
                       ValRet_Prot (rPNm,rPt) 
                              = stRetVal  
                     intFType <- renameFunType rPt 
                     let
                       (univVars,itypes,otype,_)
-                             = stripFunType rPt pn 0
+                             = stripFunType intFType pn 0
                       fEqn   = TSimp (prot,otype)
-                      sEqn   = TSimp (TypeVarInt hcase,head itypes)
-                      finEqn = (fEqn:sEqn:eqnProcs) 
+                      fstIT  = head itypes
+                      sEqn   = TSimp (TypeVarInt typeHCase,fstIT)
+                      newChCont
+                             = (ch,(pol,TypeVarInt typeHCase)):delChCon 
 
                     modify $ \(n,tt,c,chC,sym) -> 
-                              (n,hcase,c,chanCont,sym)                   
-                    rsEqns <- handle_Hcase rs (ch,pol,prot) 
-                                              (chanCont,hcase)  
+                              (n,tt,c,newChCont,sym)
+
+                    eqnProcs <- genEquations_Proc procs
                     let 
-                      retEqn = TQuant ([],[hcase]) (finEqn ++ rsEqns) 
-                    return [retEqn]  
+                      finEqn = TQuant ([],typeHCase:univVars)
+                                      (fEqn:sEqn:eqnProcs)
+
+                    modify $ \(n,tt,c,chC,sym) -> 
+                              (n,tt,context,delChCon,symTab)
+
+                    rsEqns <- handle_Hcase rs (ch,pol,prot) 
+                                               
+                    let 
+                      retEqn = (finEqn:rsEqns) 
+                    return retEqn  
 
         Out  -> do 
             let 
@@ -390,8 +404,7 @@ handle_Hcase ((handle,procs,pn):rs) (ch,pol,prot) (chanCont,hcase) = do
                 Left stEmsg ->
                     left stEmsg
                 Right stRetVal -> do
-                    newVars  <- genNewVarList (length procs)
-                    eqnProcs <- genEquations_Proc procs newVars
+                    eqnProcs <- genEquations_Proc procs 
                     let 
                       ValRet_Coprot (rPNm,rPt) 
                              = stRetVal
@@ -400,19 +413,30 @@ handle_Hcase ((handle,procs,pn):rs) (ch,pol,prot) (chanCont,hcase) = do
 
                     let
                       (univVars,itypes,otype,_)
-                             = stripFunType rPt pn 0
+                             = stripFunType intFType pn 0
                       fEqn   = TSimp (prot,otype)
-                      sEqn   = TSimp (TypeVarInt hcase,head itypes)
-                      finEqn = (fEqn:sEqn:eqnProcs) 
+                      fstIT  = head itypes
+                      sEqn   = TSimp (TypeVarInt typeHCase,fstIT)
+                      newChCont
+                             = (ch,(pol,TypeVarInt typeHCase)):delChCon 
+
 
                     modify $ \(n,tt,c,chC,sym) -> 
-                              (n,hcase,c,chanCont,sym)                   
-                    rsEqns <- handle_Hcase rs (ch,pol,prot) 
-                                              (chanCont,hcase)    
-                    let 
-                      retEqn = TQuant ([],[hcase]) (finEqn ++ rsEqns) 
-                    return [retEqn]
+                              (n,tt,c,newChCont,sym)
 
+                    eqnProcs <- genEquations_Proc procs
+                    let 
+                      finEqn = TQuant ([],typeHCase:univVars) 
+                                      (fEqn:sEqn:eqnProcs)
+
+                    modify $ \(n,tt,c,chC,sym) -> 
+                              (n,tt,context,delChCon,symTab)
+
+                    rsEqns <- handle_Hcase rs (ch,pol,prot) 
+                                               
+                    let 
+                      retEqn = (finEqn:rsEqns) 
+                    return retEqn  
 
 -- =========================================================================
 -- =========================================================================
@@ -442,22 +466,30 @@ fun_Run (name,terms,ichs,ochs,pn) = do
                  = retVal
         case printProcError argsTrip lTrip of 
             Right _  -> do
+               renPType <- renameFunType procType
                let 
                  (uvars,seqTypes,iProts,oProts,procPn)
-                         = stripProcProt procType
-                 seqEqns = zipWith (\x y -> TSimp (TypeVarInt x,y)) termVars seqTypes   
-               case genEqnsPRun (ichs,iProts,In) (chCont,name,pn) of 
+                   = stripProcProt renPType
+                 seqEqns
+                   = zipWith (\x y -> TSimp (TypeVarInt x,y))
+                             termVars seqTypes  
+                 eithIEqns
+                   = genEqnsPRun (ichs,iProts,In) (chCont,name,pn)
+                 eithOEqns
+                   = genEqnsPRun (ochs,oProts,Out) (chCont,name,pn)
+
+               case eithIEqns  of 
                    Left emsg ->
-                       left emsg
+                      left emsg
                    Right inEqns -> 
-                       case genEqnsPRun (ochs,oProts,Out) (chCont,name,pn) of  
-                           Left emsg -> 
-                               left emsg
-                           Right outEqns -> do 
-                               let 
-                                 finEqns = TQuant ([],termVars)
-                                              (seqEqns++inEqns++outEqns)
-                               return ([finEqns],1)
+                      case eithOEqns of  
+                        Left emsg -> 
+                          left emsg
+                        Right outEqns -> do 
+                          let 
+                            finEqns = TQuant ([],termVars ++ uvars)
+                                       (seqEqns++inEqns++outEqns)
+                          return ([finEqns],1)
                                 
 
             Left argEmsg -> do 
@@ -526,28 +558,28 @@ fun_PCase ::(Term,[PattProc],PosnPair) ->
             EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
                    ([TypeEqn],EndFlag)
 fun_PCase (term,pattProcs,pn) = do
-    (_,protPCase,cont,chCont,symTab) <- get
+    (_,_,cont,chCont,symTab) <- get
     termVar      <- genNewVar 
     termEqns     <- genEquationsList [term] [termVar]
-    pattProcEqns <- genPCaseEquations pattProcs (termVar,protPCase)
+    pattProcEqns <- genPCaseEquations pattProcs termVar
     let 
       finEqn = TQuant ([],[termVar]) (pattProcEqns++termEqns)
     modify $ \(n,tt,c,chC,sym) -> (n,tt,cont,chC,sym)  
     return $ ([finEqn],1)
 
-genPCaseEquations :: [PattProc] -> (TypeThing,TypeThing) -> 
+genPCaseEquations :: [PattProc] -> TypeThing -> 
                      EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
                          [TypeEqn]
 genPCaseEquations [] _ 
     = return []
-genPCaseEquations ((patt,proc):ps) (termVar,protPCase) = do 
-    (_,protPCase,cont,chCont,symTab) <- get
+genPCaseEquations ((patt,proc):ps) termVar = do 
+    (_,_,cont,chCont,symTab) <- get
     pattEqns <- genPattEquationsList [patt] [termVar]
-    varProcs <- genNewVarList (length proc)
-    procEqns <- genEquations_Proc proc varProcs 
-    modify $ \(n,tt,c,chC,sym) -> (n,protPCase,cont,chCont,sym)     
-    psEqns   <- genPCaseEquations ps (termVar,protPCase)
-    return $ pattEqns ++ procEqns ++ psEqns
+    procEqns <- genEquations_Proc proc  
+    modify $ \(n,tt,c,chC,sym) -> (n,tt,cont,chCont,sym)     
+    psEqns   <- genPCaseEquations ps termVar
+    let pattProcEqns = combinePattProcEqns pattEqns procEqns
+    return $ pattProcEqns ++ psEqns
 
 
 -- ============================================================================
@@ -602,7 +634,7 @@ helper_Split (pol,prot,pn) (ch1,tvar1) (ch2,tvar2)  delChCon =
 -- ============================================================================
 -- ============================================================================
 
-fun_Fork :: (String,[(PChannel,Process)],PosnPair) -> 
+fun_Fork :: (PChannel,[(PChannel,[PChannel],Process)],PosnPair) -> 
             EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
               ([TypeEqn],EndFlag)
 fun_Fork (ch,chProcList,pn) = do             
@@ -618,59 +650,70 @@ fun_Fork (ch,chProcList,pn) = do
         Just pair@(pol,prot) -> do 
             let 
               delChCon = delete (ch,pair) chCont
-            help_Fork (chProcList!!0) (chProcList!!1)
-                      (pol,prot,pn) delChCon
+              triple1  = (chProcList!!0)
+              triple2  = (chProcList!!1)
+              chs1     = (S.fromList.(\(a,b,c) -> b)) triple1 
+              chs2     = (S.fromList.(\(a,b,c) -> b)) triple2
+              commChans= S.intersection chs1 chs2
+            case null commChans of 
+                False -> do 
+                    let 
+                      lCommChs = (S.toList) commChans
+                      prntChs  = intercalate ", " (map show lCommChs)
+                    left $ 
+                        "Common channels <<" ++ prntChs
+                        ++ ">> between the two processes" ++ printPosn pn 
+
+                True  ->      
+                    help_Fork triple1 triple2 
+                              (pol,prot,pn) delChCon
 
 
-help_Fork :: (PChannel,Process)  -> (PChannel,Process) -> 
+help_Fork :: (PChannel,[PChannel],Process)  -> (PChannel,[PChannel],Process) -> 
              (Polarity,Type,PosnPair) -> ChanContext -> 
              EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
                ([TypeEqn],EndFlag)            
-help_Fork (ch1,proc1) (ch2,proc2) (pol,prot,pn) delChCon = do 
+help_Fork (ch1,uchs1,proc1) (ch2,uchs2,proc2) (pol,prot,pn) delChCon = do 
     (num,_,context,chanCont,symTab) <- get
     [var1,var2] <- genNewVarList 2 
-    proc1Vars <- genNewVarList (length proc1)
-    proc2Vars <- genNewVarList (length proc2)
     let 
+      p1Con  = filter (\(dch,_) -> elem dch uchs1) delChCon
+      p2Con  = filter (\(dch,_) -> elem dch uchs2) delChCon  
       type1  = TypeVarInt var1
       type2  = TypeVarInt var2 
     case pol of 
         Out -> do 
             let 
               ch1con = (ch1,(Out,type1)) 
-              con1   = ch1con:delChCon
+              con1   = ch1con:p1Con
             modify $ \(n,tt,c,chC,sym) -> (n,tt,c,con1,sym)
-            proc1Eqns <- genEquations_Proc proc1 proc1Vars
-            (_,_,_,chanCont1,_) <- get 
+            proc1Eqns <- genEquations_Proc proc1 
             let 
-              delCon1 = delete ch1con chanCont1
               ch2con  = (ch2,(Out,type2))
-              con2    = ch2con:delCon1
+              con2    = ch2con:p2Con
             modify $ \(n,tt,c,chC,sym) -> (n,tt,context,con2,sym)
-            proc2Eqns <- genEquations_Proc proc2 proc2Vars
+            proc2Eqns <- genEquations_Proc proc2 
             let 
               tensProt = ProtTensor (type1,type2,pn)
               simpEqn  = TSimp (prot,tensProt)
-              finEqn   = TQuant ([],[var1,var2]) [simpEqn]
+              finEqn   = TQuant ([],[var1,var2]) (simpEqn:(proc1Eqns++proc2Eqns))
             return ([finEqn],1)
 
         In  -> do     
             let 
               ch1con = (ch1,(In,type1)) 
-              con1   = ch1con:delChCon
+              con1   = ch1con:p1Con
             modify $ \(n,tt,c,chC,sym) -> (n,tt,c,con1,sym)
-            proc1Eqns <- genEquations_Proc proc1 proc1Vars
-            (_,_,_,chanCont1,_) <- get 
+            proc1Eqns <- genEquations_Proc proc1 
             let 
-              delCon1 = delete ch1con chanCont1
               ch2con  = (ch2,(In,type2))
-              con2    = ch2con:delCon1
+              con2    = ch2con:p2Con
             modify $ \(n,tt,c,chC,sym) -> (n,tt,context,con2,sym)
-            proc2Eqns <- genEquations_Proc proc2  proc2Vars
+            proc2Eqns <- genEquations_Proc proc2  
             let 
               tensProt = ProtPar (type1,type2,pn)
               simpEqn  = TSimp (prot,tensProt)
-              finEqn   = TQuant ([],[var1,var2]) [simpEqn]
+              finEqn   = TQuant ([],[var1,var2]) (simpEqn:(proc1Eqns++proc2Eqns))
             return ([finEqn],1)
 
 
@@ -683,8 +726,6 @@ fun_Plug :: ([PChannel],(Process,Process),PosnPair) ->
 fun_Plug (chs,(proc1,proc2),pn) = do 
     (num,_,context,chanCont,symTab) <- get
     newVars   <- genNewVarList (length chs) 
-    proc1Vars <- genNewVarList (length proc1)
-    proc2Vars <- genNewVarList (length proc2)
     let 
       typeVars   = map TypeVarInt newVars
       incOutCont = zipWith (\c t -> (c,(Out,t))) chs typeVars 
@@ -695,16 +736,16 @@ fun_Plug (chs,(proc1,proc2),pn) = do
       procCon2   = incInCont ++ chanCont 
     case newVars == [] of 
         True  -> do 
-            p1Eqns <- genEquations_Proc proc1 proc1Vars
+            p1Eqns <- genEquations_Proc proc1 
             modify $ \(n,tt,c,chC,sym) -> (n,tt,context,chanCont,sym)
-            p2Eqns <- genEquations_Proc proc2 proc2Vars
+            p2Eqns <- genEquations_Proc proc2 
             return (p1Eqns ++ p2Eqns,1)
 
         False -> do 
             modify $ \(n,tt,c,chC,sym) -> (n,tt,context,procCon1,sym)
-            p1Eqns <- genEquations_Proc proc1 proc1Vars
+            p1Eqns <- genEquations_Proc proc1 
             modify $ \(n,tt,c,chC,sym) -> (n,tt,context,procCon2,sym)
-            p2Eqns <- genEquations_Proc proc2 proc2Vars
+            p2Eqns <- genEquations_Proc proc2 
             let 
               finEqn = TQuant ([],newVars) (p1Eqns ++ p2Eqns)
             return ([finEqn],1)
@@ -716,4 +757,36 @@ fun_Plug (chs,(proc1,proc2),pn) = do
 fun_Id :: (PChannel,PChannel,PosnPair) -> 
           EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
                ([TypeEqn],EndFlag) 
-fun_Id (chl,chr,pn) = undefined 
+fun_Id (chl,chr,pn) = do 
+    (_,_,_,chanCont,symTab) <- get
+    case lookup chl chanCont of 
+        Nothing -> 
+            left $ "Trying to identify a channel <<" ++ chl 
+                   ++ ">> that doesn't exist" ++ printPosn pn 
+        Just (pol1,prot1) -> 
+            case lookup chr chanCont of 
+                Nothing -> 
+                    left $ "Trying to identify a channel <<" ++ chl 
+                          ++ ">> that doesn't exist" ++ printPosn pn 
+
+                Just (pol2,prot2) -> 
+                    case (pol1,pol2) of 
+                        (Out,Out) -> do 
+                            let 
+                              finEqn = TSimp (prot1,Neg(prot2,pn))
+                            return ([finEqn],1)  
+
+                        (Out,In) -> do 
+                            let 
+                              finEqn = TSimp (prot1,prot2)
+                            return ([finEqn],1)  
+
+                        (In,Out) -> do 
+                            let 
+                              finEqn = TSimp (prot1,prot2) 
+                            return ([finEqn],1)  
+                        
+                        (In,In) -> do   
+                            let 
+                              finEqn = TSimp (prot1,Neg(prot2,pn))
+                            return ([finEqn],1)  

@@ -193,7 +193,7 @@ stripProcProt funType
                           error $ show funType 
 
               otherwise ->
-                  error $ "Not expecting a function type like this::" ++ show funType     
+                  error $ "Not expecting a process type like this::" ++ show funType     
 
 
 
@@ -306,39 +306,3 @@ rnmFTypesHelp allFuns = do
 getOutFnType :: Type -> ([Type],Type) 
 getOutFnType (TypeFun (ins,out,pn)) = (ins,out) 
                          
--- ===================================================================================
--- ===================================================================================
-combineEqns :: [TypeEqn] -> [TypeEqn]
-combineEqns totEqns
-        = case  noQuantEqns totEqns of 
-              True  ->
-                  totEqns
-              False ->
-                  combineEqnsHelper totEqns ([],[],[])
-
-combineEqnsHelper :: [TypeEqn] -> (UniVars,ExistVars,[TypeEqn]) -> [TypeEqn]
-combineEqnsHelper [] (suv,sev,steqns)
-        = [TQuant (suv,sev) steqns]
-combineEqnsHelper (eqn:eqns) (suv,sev,steqns)  
-        = case eqn of 
-             TSimp simpEqn ->
-                 combineEqnsHelper eqns (suv,sev,(steqns ++ [TSimp simpEqn]))
-             TQuant (uvars,evars) eqlist ->
-                 combineEqnsHelper eqns (suv++uvars,sev++evars,steqns++eqlist) 
-
--- return True if there is no Quant eqn
-noQuantEqns :: [TypeEqn] -> Bool 
-noQuantEqns eqns 
-        = case (filter isQuantEqn eqns) of 
-              [] -> 
-                  True
-              _  ->
-                  False    
-
-isQuantEqn :: TypeEqn -> Bool
-isQuantEqn eqn 
-        = case eqn of 
-              TQuant _ _ ->
-                  True
-              TSimp _ ->
-                  False   

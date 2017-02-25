@@ -152,7 +152,8 @@ takeCareofProcDefn defn@(ProcessDefn (pname,mfunType,pattProc,posn)) = do
             Left errormsg -> do 
                 let
                    emsg = ["Type error in process <<",show pname, ">> defined ",
-                           printPosn posn, "\n", errormsg] 
+                           printPosn posn, "\n", errormsg,"\n\n",
+                           prettyStyle zigStyle procEqns] 
 
                 left $ concat emsg 
 
@@ -276,11 +277,11 @@ genPattProcEqns (patts,inchs,outchs,procs) (pname,pn,fType) = do
               chCont = inCon ++ outCon
 
             modify $ \(n,tt,c,chC,st) -> (n,tt,c,chCont,st)
-            procVars  <- genNewVarList (length procs)
-            procEqns <- genEquations_Proc procs procVars 
+            procEqns <- genEquations_Proc procs  
             let 
               combPattProcEqn 
-                    = combineEqns (pattEqns ++ procEqns)
+                    = combinePattProcEqns 
+                        (combineEqns pattEqns) procEqns 
               totEqn= TQuant ([],totVars) (lowestEqn:combPattProcEqn)
 
             case fType of

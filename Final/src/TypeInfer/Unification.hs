@@ -186,7 +186,9 @@ matchStructure (texpr1,texpr2)
 
               (ProtProc (s1,in1,out1,pn1),ProtProc (s2,in2,out2,pn2)) -> do 
                   let 
-                    boolCond = (s1 == s2,in1 == in2,out1 == out2)
+                    boolCond = (length s1   == length s2,
+                                length in1  == length in2,
+                                length out1 == length out2)
                   case boolCond of 
                       (True,True,True) ->
                           return $ zip (s1++in1++out1) 
@@ -220,11 +222,12 @@ procError_helper boolCond
           (True,False,False) -> 
               "input channels and output channels."
 
-
 matchError :: (Type,Type) -> ErrorMsg
 matchError (texpr1,texpr2)
         = "\nExpected type <<" ++ showError texpr1 
-           ++ ">> instead got <<" ++ printTypePn texpr2 
+           ++ ">> instead got <<" ++ showError texpr2 ++ ">>" ++
+            printPosn (getTypePosn texpr2) 
+
 
 showError :: Type -> String
 showError t 
@@ -345,11 +348,15 @@ substInTExpr (x,t) texpr
                       ) 
 
               Neg (nt,pn) ->
-                  Neg (substInTExpr (x,t) nt,pn)
+                  ntExpr    
+                where
+                    newNeg = Neg (substInTExpr (x,t) nt,pn)
+                    ntExpr = normaliseNeg newNeg  
+                    
 
               ProtNamed (nm,ts,pn) ->
                   ProtNamed 
-                      (nm,map (substInTExpr (x,t)) ts,pn)
+                      (nm,map (substInTExpr (x, t)) ts,pn)
 
               CoProtNamed (nm,ts,pn) ->
                   CoProtNamed 

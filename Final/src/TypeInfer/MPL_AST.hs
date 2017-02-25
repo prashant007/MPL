@@ -185,6 +185,8 @@ instance Show Type where
         (intercalate ", " .map show) ips ++ " => " ++ 
         (intercalate ", " .map show) ops
 
+
+
 printConst :: BaseType -> String
 printConst btype 
         = case btype of 
@@ -330,7 +332,7 @@ data ProcessCommand
      | PHPut  (Name,PChannel,PosnPair)
      | PHCase (PChannel,[(Name,Process,PosnPair)],PosnPair)
      | PSplit (PChannel,(PChannel,PChannel),PosnPair)
-     | PFork  (String,[(PChannel,Process)],PosnPair)
+     | PFork  (String,[(PChannel,[PChannel],Process)],PosnPair)
      | PPlug  ([PChannel],(Process,Process),PosnPair)
      | PId    (PChannel,PChannel,PosnPair)
      | PCase  (Term,[PattProc],PosnPair)

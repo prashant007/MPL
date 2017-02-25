@@ -917,7 +917,7 @@ transCoProtocolClause x = case x of
          datName = M.DataName (transTypeSpec typespec)
          (protPosn,protVar) 
                  = transUIdent uident
-         coprot  = dNametoProtocol datName protPosn
+         coprot  = dNametoCoProtocol datName protPosn
          subst   = (protVar,coprot)
       cprotPhrs <- mapM (transCoProtocolPhrase subst) 
                         coprotocolphrases   
@@ -960,6 +960,9 @@ transProtocolPhrase subsProt@(var,prot) x = case x of
                         fType   = M.StrFType (pVars,funType)
                       return (handName,fType) 
 
+
+
+
 transCoProtocolPhrase :: (M.Name,M.Type) -> CoProtocolPhrase ->
                          State [(String,[M.Name])] (M.Name,M.FunType)
 
@@ -992,9 +995,8 @@ transCoProtocolPhrase subsProt@(var,coProt) x = case x of
                         substProt = replaceType subsProt tProt  
                         funType = M.TypeFun ([substProt],coProt,cposn)
                         pVars   = E.getParamVars funType
-                        fType   = M.StrFType (pVars,funType)
+                        fType   = M.StrFType (pVars,E.dualiseProt funType)
                       return (chandName,fType) 
-
 
 
 -- ======================================================
@@ -1947,14 +1949,11 @@ getChfromComm pcomm
           M.PSplit (och,(sch1,sch2),_) ->
               ([och],[sch1,sch2])           
                 
-          M.PFork  (ch,pairList,_) ->
-              (ch:lchs,delchs1 ++ delchs2)
+          M.PFork  (ch,tripList,_) ->
+              (ch:allChs,[])
             where 
-                 delchs1   = map fst pairList  
-                 allPcomms = concat $ map snd pairList
-                 chDelch   = map getChfromComm allPcomms
-                 lchs      = concat $ map fst chDelch 
-                 delchs2   = concat $ map snd chDelch
+                allChs = (concat.map (\(a,b,c) -> b)) tripList 
+
 
           M.PPlug  (plugChs,(proc1,proc2),_) ->
               (
@@ -1986,11 +1985,13 @@ getChfromComm pcomm
 -- ======================================================================  
 
 transForkPart :: ForkPart -> 
-                 State [(String,[M.Name])] (M.PChannel,M.Process)
+                 State [(String,[M.Name])] (M.PChannel,[M.PChannel], M.Process)
 transForkPart x = case x of
   FORKPARTshort pident process -> do 
       tProcs <- transProcess process 
-      return (snd $ transPIdent pident,tProcs)     
+      let 
+        chs = getChs_proc tProcs
+      return (snd $ transPIdent pident,chs,tProcs)     
 
 
 transHandler :: Handler -> 

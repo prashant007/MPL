@@ -6,6 +6,7 @@ import TypeInfer.MPL_AST
 import Control.Monad.State.Lazy
 import Control.Monad.Trans.Either
 import Data.List 
+import System.Console.ANSI
 
 equalS = replicate 90 '='
 stars  = replicate 90 '*'
@@ -327,12 +328,12 @@ renameTVarInts substList intType
           Get (type1,type2,pn) -> do 
               nType1 <- renameTVarInts substList type1
               nType2 <- renameTVarInts substList type2 
-              return $ Get (nType1,nType2,pn)
+              return $ Get (nType1,nType2,pn) 
 
           Put (type1,type2,pn) -> do 
               nType1 <- renameTVarInts substList type1
               nType2 <- renameTVarInts substList type2 
-              return $ Get (nType1,nType2,pn)
+              return $ Put (nType1,nType2,pn)
 
           Neg (type1,pn) -> do 
               nType1 <- renameTVarInts substList type1
@@ -354,7 +355,7 @@ renameTVarInts substList intType
           ProtPar (type1,type2,pn) -> do 
               nType1 <- renameTVarInts substList type1
               nType2 <- renameTVarInts substList type2 
-              return $ ProtTensor (nType1,nType2,pn)
+              return $ ProtPar (nType1,nType2,pn)
 
           ProtProc (types1,types2,types3,pn) -> do 
               nTypes1 <- mapM (renameTVarInts substList) types1
@@ -572,3 +573,125 @@ getAllProcNames defns = map getProcDefnName defns
 
 getProcDefnName :: Defn -> Name 
 getProcDefnName (ProcessDefn (pname,_,_,_)) = pname 
+
+dualiseProt :: Type -> Type 
+dualiseProt t 
+    = case t of
+          Get (gt1,gt2,pn) ->
+              Put 
+                  (gt1,dualiseProt gt2,pn)
+
+          Put (pt1,pt2,pn) -> 
+              Get
+                  (pt1,dualiseProt pt2,pn)
+
+          Neg pair ->
+              Neg pair  
+
+          TopBot pn ->
+              TopBot pn 
+
+          ProtNamed (pnm,pts,ppn) ->
+              ProtNamed
+                  (pnm,map dualiseProt pts,ppn)         
+
+          CoProtNamed (pnm,pts,ppn) ->
+              CoProtNamed
+                  (pnm,map dualiseProt pts,ppn)  
+
+          ProtTensor (pt1,pt2,pn) -> 
+              ProtPar 
+                  (dualiseProt pt1,dualiseProt pt2,pn)
+
+          ProtPar (pt1,pt2,pn) -> 
+              ProtTensor 
+                  (dualiseProt pt1,dualiseProt pt2,pn)
+
+          TypeFun (its,ot,pn) -> 
+              TypeFun 
+                  (map dualiseProt its,dualiseProt ot,pn)
+
+          otherwise -> 
+              t 
+
+
+normaliseNeg :: Type -> Type 
+normaliseNeg oType@(Neg (nType,nPn))
+    = case nType of 
+          TypeVarInt _ ->
+              oType
+          Neg snPair ->
+              fst snPair 
+          otherwise ->
+              dualiseProt nType
+
+
+-- ===================================================================================
+-- ===================================================================================
+combineEqns :: [TypeEqn] -> [TypeEqn]
+combineEqns totEqns
+        = case  noQuantEqns totEqns of 
+              True  ->
+                  totEqns
+              False ->
+                  combineEqnsHelper totEqns ([],[],[])
+
+combineEqnsHelper :: [TypeEqn] -> (UniVars,ExistVars,[TypeEqn]) -> [TypeEqn]
+combineEqnsHelper [] (suv,sev,steqns)
+        = [TQuant (suv,sev) steqns]
+combineEqnsHelper (eqn:eqns) (suv,sev,steqns)  
+        = case eqn of 
+             TSimp simpEqn ->
+                 combineEqnsHelper eqns (suv,sev,(steqns ++ [TSimp simpEqn]))
+             TQuant (uvars,evars) eqlist ->
+                 combineEqnsHelper eqns (suv++uvars,sev++evars,steqns++eqlist) 
+
+combinePattProcEqns :: [TypeEqn] -> [TypeEqn] -> [TypeEqn]
+combinePattProcEqns pattEqns procEqns 
+    = case null pattEqns of 
+          True -> 
+              procEqns
+          False ->
+              case head pattEqns of 
+                   TQuant (uvars,evars) qeqns ->
+                       [TQuant (uvars,evars) (qeqns ++ procEqns)]
+                   otherwise ->
+                       pattEqns ++ procEqns
+
+
+combEqns_Proc :: ([TypeEqn],[TypeEqn]) -> [TypeEqn]
+combEqns_Proc (ts,teqns) 
+    = case null ts of 
+          True  -> 
+              teqns
+          False -> 
+              case hts of 
+                  TQuant (uvars, evars) tqs ->
+                      [TQuant (uvars,evars) (tqs++teqns)]
+                  TSimp (_,_) -> 
+                      hts:teqns
+            where
+               hts = head ts  
+
+-- return True if there is no Quant eqn
+noQuantEqns :: [TypeEqn] -> Bool 
+noQuantEqns eqns 
+        = case (filter isQuantEqn eqns) of 
+              [] -> 
+                  True
+              _  ->
+                  False    
+
+isQuantEqn :: TypeEqn -> Bool
+isQuantEqn eqn 
+        = case eqn of 
+              TQuant _ _ ->
+                  True
+              TSimp _ ->
+                  False   
+
+
+putStrLnRed :: String -> IO ()
+putStrLnRed str = do 
+  setSGR [SetColor Foreground Dull Red]
+  putStrLn str 

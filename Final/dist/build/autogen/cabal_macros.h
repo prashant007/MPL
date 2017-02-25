@@ -7,6 +7,13 @@
   (major1) == 1 && (major2) <  2 || \
   (major1) == 1 && (major2) == 2 && (minor) <= 1)
 
+/* package ansi-terminal-0.6.2.3 */
+#define VERSION_ansi_terminal "0.6.2.3"
+#define MIN_VERSION_ansi_terminal(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  6 || \
+  (major1) == 0 && (major2) == 6 && (minor) <= 2)
+
 /* package array-0.5.1.0 */
 #define VERSION_array "0.5.1.0"
 #define MIN_VERSION_array(major1,major2,minor) (\
@@ -140,5 +147,5 @@
   (major1) == 2 && (major2) <  26 || \
   (major1) == 2 && (major2) == 26 && (minor) <= 0)
 
-#define CURRENT_PACKAGE_KEY "Final_DNMYIzVSz7KDFxZfkpcd7y"
+#define CURRENT_PACKAGE_KEY "Final_HsQ2Hk9eZHvHvUYyrFd0Xo"
 
