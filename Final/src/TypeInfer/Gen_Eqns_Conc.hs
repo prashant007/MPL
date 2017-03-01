@@ -64,7 +64,7 @@ foldPCommand :: ((Name,[Term],[PChannel],[PChannel],PosnPair) -> b) ->
                 ((PChannel,(PChannel,PChannel),PosnPair) -> b) ->
                 ((PChannel,[(PChannel,[PChannel],Process)],PosnPair) -> b) ->
                 (([PChannel],(Process,Process),PosnPair) -> b) ->
-                ((PChannel,PChannel,PosnPair) -> b) ->
+                ((PChannel,Channel,PosnPair) -> b) ->
                 ((Term,[PattProc],PosnPair) -> b) ->
                 ProcessCommand -> b 
 
@@ -343,7 +343,6 @@ fun_HCase (ch,tripList,pn) = do
         Just pair@(pol,prot) -> do 
             let 
               delChCon = delete (ch,pair) chCont
-              --newCont  = (ch,(pol,TypeVarInt typeHCase)):delChCon
             modify $ \(n,tt,c,chC,sym) -> (n,tt,c,delChCon,sym)
             retEqns <- handle_Hcase tripList (ch,pol,prot) 
             return (retEqns,1)
@@ -404,7 +403,7 @@ handle_Hcase ((handle,procs,pn):rs) (ch,pol,prot) = do
                 Left stEmsg ->
                     left stEmsg
                 Right stRetVal -> do
-                    eqnProcs <- genEquations_Proc procs 
+                    
                     let 
                       ValRet_Coprot (rPNm,rPt) 
                              = stRetVal
@@ -754,39 +753,44 @@ fun_Plug (chs,(proc1,proc2),pn) = do
 -- ============================================================================
 -- ============================================================================ 
 
-fun_Id :: (PChannel,PChannel,PosnPair) -> 
+fun_Id :: (PChannel,Channel,PosnPair) -> 
           EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
                ([TypeEqn],EndFlag) 
 fun_Id (chl,chr,pn) = do 
     (_,_,_,chanCont,symTab) <- get
     case lookup chl chanCont of 
-        Nothing -> 
-            left $ "Trying to identify a channel <<" ++ chl 
-                   ++ ">> that doesn't exist" ++ printPosn pn 
-        Just (pol1,prot1) -> 
-            case lookup chr chanCont of 
-                Nothing -> 
-                    left $ "Trying to identify a channel <<" ++ chl 
-                          ++ ">> that doesn't exist" ++ printPosn pn 
+      Nothing -> 
+        left $ "Trying to identify a channel <<" ++ chl 
+             ++ ">> that doesn't exist" ++ printPosn pn 
+      Just (pol1,prot1) -> 
+        case chr of
+          PosChan pChan ->
+            case lookup pChan chanCont of 
+              Nothing ->
+                left $ "Trying to identify a channel <<" ++ chl 
+                     ++ ">> that doesn't exist" ++ printPosn pn
 
-                Just (pol2,prot2) -> 
-                    case (pol1,pol2) of 
-                        (Out,Out) -> do 
-                            let 
-                              finEqn = TSimp (prot1,Neg(prot2,pn))
-                            return ([finEqn],1)  
+              Just (pol2,prot2) -> do 
+                let 
+                  eqn = TSimp (prot1,prot2)
+                return ([eqn],1)    
 
-                        (Out,In) -> do 
-                            let 
-                              finEqn = TSimp (prot1,prot2)
-                            return ([finEqn],1)  
+          NegChan nChan ->  
+            case lookup nChan chanCont of 
+              Nothing ->
+                left $ "Trying to identify a channel <<" ++ chl 
+                     ++ ">> that doesn't exist" ++ printPosn pn
 
-                        (In,Out) -> do 
-                            let 
-                              finEqn = TSimp (prot1,prot2) 
-                            return ([finEqn],1)  
-                        
-                        (In,In) -> do   
-                            let 
-                              finEqn = TSimp (prot1,Neg(prot2,pn))
-                            return ([finEqn],1)  
+              Just (pol2,prot2) -> 
+                case prot2 of 
+                    Neg nProt -> do 
+                        let 
+                          eqn = TSimp (prot1,fst nProt)
+                        return ([eqn],1)  
+
+                    otherwise -> do 
+                        let 
+                          eqn = TSimp (prot1,Neg (prot2,pn))
+                        return ([eqn],1)    
+
+

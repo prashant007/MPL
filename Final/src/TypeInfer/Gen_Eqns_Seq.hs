@@ -446,21 +446,6 @@ getPattListCase pattTerms (typeLeft,typeRight) = do
             totEqn <- helperPattTermCase pattTerms (typeLeft,typeRight)
             return totEqn
 
-checkAllConses :: [PatternTermPhr] -> Either ErrorMsg Bool 
-checkAllConses _ = undefined
--- All patterns can be either cons pattern or var pattern
--- All patterns should be of the same data type.
--- if there is a var pattern as the first pattern followed by first pattern
--- then tell the user that it is an issue.
--- if a constructor name has been repeated , then throw an error.
--- if a constructor name is not present then check if the default case is present.
--- if a default case is present then everything is hunky dory else throw an error saying
--- that not all cases have been handled and there is no default case.
-
-
-
--- 1 > hidden pattern (if the 1st pattern is a  var pattern)
-
 
 helperPattTermCase :: [PatternTermPhr] -> (TypeThing,TypeThing) -> 
                       EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 

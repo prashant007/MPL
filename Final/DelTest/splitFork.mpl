@@ -5,8 +5,8 @@ protocol IntTerm (A) => P =
 
 
 coprotocol CP => Console (A) =
-              GetIntC   :: CP => Get (A|CP)  
-              PutIntC   :: CP => Put (A|CP) 
+              GetIntC   :: CP => Put (A|CP)  
+              PutIntC   :: CP => Get (A|CP) 
               CloseC    :: CP => TopBot 
 
           

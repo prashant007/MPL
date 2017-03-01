@@ -1,6 +1,6 @@
 coprotocol CP => Console (A) =
-    GetIntC   :: CP => Get (A|CP)  
-    PutIntC   :: CP => Put (A|CP) 
+    GetIntC   :: CP => Put (A|CP)  
+    PutIntC   :: CP => Get (A|CP) 
     CloseC    :: CP => TopBot  
 
 protocol IntTerm (A) => P =
@@ -10,6 +10,9 @@ protocol IntTerm (A) => P =
 
 protocol InfPut (A) => P = 
     Putter :: Put (A|P) => P 
+
+protocol Passer (A) => P = 
+      Pass :: A (+) A (*) P => P 
 
 proc p1 = 
   | console => w1 -> do 
@@ -22,7 +25,7 @@ proc p1 =
 
 proc p2 =
   | w1 => w2 -> do 
-       w2 =|= w1 
+       w2 |=| w1 
 
 proc  p3 =
     | w2 => i1 -> do 

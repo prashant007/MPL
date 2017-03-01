@@ -175,10 +175,10 @@ instance Show Type where
                str  
 
   show (ProtTensor (t1,t2,_)) 
-      = show t1 ++ "(*)" ++ show t2 
+      = show t1 ++ " (*) " ++ show t2 
 
   show (ProtPar    (t1,t2,_)) 
-      = show t1 ++ "(+)" ++ show t2 
+      = show t1 ++ " (+) " ++ show t2 
 
   show (ProtProc (seqs,ips,ops,_)) 
       = (intercalate ", " .map show) seqs ++ " | " ++
@@ -334,7 +334,7 @@ data ProcessCommand
      | PSplit (PChannel,(PChannel,PChannel),PosnPair)
      | PFork  (String,[(PChannel,[PChannel],Process)],PosnPair)
      | PPlug  ([PChannel],(Process,Process),PosnPair)
-     | PId    (PChannel,PChannel,PosnPair)
+     | PId    (PChannel,Channel,PosnPair)
      | PCase  (Term,[PattProc],PosnPair)
      deriving (Eq,Show,Generic)
 
@@ -348,12 +348,12 @@ instance () => Out (Stmt)
 
 
 type PChannel = String 
-{-
-data PChannel =  PosChan String
-               | NegChan String
-               deriving (Eq,Show,Generic)  
--}
 
+data Channel =   PosChan PChannel
+               | NegChan PChannel
+               deriving (Eq,Show,Generic)  
+
+instance () => Out (Channel)
 {-
 TERM_SYNONYTermSynonym    ::= TokTerm PIdent InfixRem PIdent "="
                                  PIdent "(" PIdent "," PIdent ")" ;

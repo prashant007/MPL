@@ -10,8 +10,8 @@ protocol IntTerm (A)  => P =
               Close    :: Top       => P  
 
 coprotocol CP => Console (A) =
-              GetIntC   :: CP => Get (A|CP)  
-              PutIntC   :: CP => Put (A|CP) 
+              GetIntC   :: CP => Put (A|CP)  
+              PutIntC   :: CP => Get (A|CP) 
               CloseC    :: CP => Bot 
 
 protocol InfGetPut (A) => P = 
@@ -19,8 +19,8 @@ protocol InfGetPut (A) => P =
     Getter :: Get (A|P) => P 
 
 coprotocol  CP => CoProtInf (A) = 
-    PutterC :: CP => Put (A|CP) 
-    GetterC :: CP => Get (A|CP)  
+    PutterC :: CP => Get (A|CP) 
+    GetterC :: CP => Put (A|CP)  
 
 defn of
    proc p2 =

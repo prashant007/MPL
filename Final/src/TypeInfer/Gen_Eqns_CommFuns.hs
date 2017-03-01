@@ -574,6 +574,7 @@ getAllProcNames defns = map getProcDefnName defns
 getProcDefnName :: Defn -> Name 
 getProcDefnName (ProcessDefn (pname,_,_,_)) = pname 
 
+{-
 dualiseProt :: Type -> Type 
 dualiseProt t 
     = case t of
@@ -586,7 +587,7 @@ dualiseProt t
                   (pt1,dualiseProt pt2,pn)
 
           Neg pair ->
-              Neg pair  
+              fst pair  
 
           TopBot pn ->
               TopBot pn 
@@ -624,6 +625,9 @@ normaliseNeg oType@(Neg (nType,nPn))
               fst snPair 
           otherwise ->
               dualiseProt nType
+
+-}
+
 
 
 -- ===================================================================================
@@ -693,5 +697,5 @@ isQuantEqn eqn
 
 putStrLnRed :: String -> IO ()
 putStrLnRed str = do 
-  setSGR [SetColor Foreground Dull Red]
+  setSGR [SetColor Foreground Vivid Red]
   putStrLn str 

@@ -1,6 +1,6 @@
 coprotocol CP => Console (A) =
-    GetIntC   :: CP => Get (A|CP)  
-    PutIntC   :: CP => Put (A|CP) 
+    GetIntC   :: CP => Put (A|CP)  
+    PutIntC   :: CP => Get (A|CP) 
     CloseC    :: CP => TopBot  
 
 protocol IntTerm (A) => P =
@@ -15,16 +15,14 @@ proc p1 =
   | console => w1,w2 -> do 
        hput GetIntC on console
        get val on console
-       put val on w1
-       get val on w2
        close w1
        close w2
        hput CloseC on console
        halt console
 
 proc p2 = 
-  | w3,w4 =>  -> do 
-       w3 =|= w4 
+  | w1,w2 =>  -> do 
+       w1 |=| neg w2 
 
 proc p3 = 
   | console =>  -> do 

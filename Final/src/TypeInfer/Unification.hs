@@ -76,6 +76,7 @@ doOccursCheck (te1,TypeVarInt x)
 match :: (Type,Type) -> Either ErrorMsg SubstList
 match (t1,t2)
         = case (t1,t2) of   
+
               (TypeVarInt x,texpr) -> 
                   check (texpr,TypeVarInt x)
 
@@ -104,7 +105,10 @@ matchStructure :: (Type,Type) -> Either ErrorMsg [(Type,Type)]
 matchStructure (texpr1,texpr2)
         = case (texpr1,texpr2) of 
               (Unit _ ,Unit _) ->
-                    return []
+                   return []
+
+              (Neg (t1,_),Neg (t2,_)) ->
+                   return [(t1,t2)]
 
               (TypeFun (ins1,out1,posn1),TypeFun (ins2,out2,posn2)) ->
                    case length ins1 == length ins2 of
@@ -158,9 +162,6 @@ matchStructure (texpr1,texpr2)
               (Put (t1,t2,_),Put (t3,t4,_)) ->
                   return [(t1,t3),(t2,t4)]  
 
-              (Neg (t1,_),Neg (t2,_)) ->
-                  return [(t1,t2)]
-
               (TopBot _,TopBot _) ->
                   return []
 
@@ -195,7 +196,7 @@ matchStructure (texpr1,texpr2)
                                        (s2 ++ in2 ++ out2)
                       _ ->  
                           Left $ procError boolCond  
-
+  
               otherwise -> do 
                   Left $ matchError (texpr1,texpr2)    
 
@@ -226,7 +227,17 @@ matchError :: (Type,Type) -> ErrorMsg
 matchError (texpr1,texpr2)
         = "\nExpected type <<" ++ showError texpr1 
            ++ ">> instead got <<" ++ showError texpr2 ++ ">>" ++
-            printPosn (getTypePosn texpr2) 
+            (printPosn.getTypePosn.select_TExpr texpr1) texpr2 
+
+
+select_TExpr :: Type -> Type -> Type 
+select_TExpr te1 te2 =
+        case l1-l2 >= 0 of 
+            True  -> te1 
+            False -> te2   
+    where
+      (l1,c1) = getTypePosn te1 
+      (l2,c2) = getTypePosn te2 
 
 
 showError :: Type -> String
@@ -348,10 +359,8 @@ substInTExpr (x,t) texpr
                       ) 
 
               Neg (nt,pn) ->
-                  ntExpr    
-                where
-                    newNeg = Neg (substInTExpr (x,t) nt,pn)
-                    ntExpr = normaliseNeg newNeg  
+                  Neg (substInTExpr (x,t) nt,pn)
+                    
                     
 
               ProtNamed (nm,ts,pn) ->

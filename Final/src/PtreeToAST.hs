@@ -995,7 +995,7 @@ transCoProtocolPhrase subsProt@(var,coProt) x = case x of
                         substProt = replaceType subsProt tProt  
                         funType = M.TypeFun ([substProt],coProt,cposn)
                         pVars   = E.getParamVars funType
-                        fType   = M.StrFType (pVars,E.dualiseProt funType)
+                        fType   = M.StrFType (pVars,funType)
                       return (chandName,fType) 
 
 
@@ -1824,12 +1824,12 @@ transProcessCommand x = case x of
           Right retPlug ->
               return retPlug      
 
-  Procss_ID pchannel1 pchannel2 -> do 
+  Procss_ID channel pchannel -> do 
       return $ M.PId 
           (
-            transChannel pchannel1,
-            transChannel pchannel2,
-            getPosnChannel pchannel1
+            transChannel channel,
+            transPChannel pchannel,
+            getPosnChannel channel
           )
 
   PROCESScase tokcase term processphrases -> do 
@@ -1969,7 +1969,7 @@ getChfromComm pcomm
                 dchs2     = concat $ map snd pairList2 
 
           M.PId    (ch1,ch2,_) -> 
-              ([ch1,ch2],[])
+              ([ch1,extractChan ch2],[])
 
           M.PCase  (_,pattPList,_) ->
               (chs,dchs)
@@ -1980,7 +1980,11 @@ getChfromComm pcomm
                  dchs     = concat $ map snd pairList  
 
 
-        
+extractChan :: M.Channel -> M.PChannel        
+extractChan chan 
+    = case chan of 
+          M.PosChan p  -> p
+          M.NegChan np -> np 
 -- ======================================================================
 -- ======================================================================  
 
@@ -2022,6 +2026,13 @@ transProcessPhrase x = case x of
 transChannel :: Channel -> M.PChannel
 transChannel x = case x of
   CHANNEL pident -> snd $ transPIdent pident
+
+transPChannel :: PChannel -> M.Channel
+transPChannel x = case x of 
+  BARECHANNEL pident -> M.PosChan
+                          (snd $ transPIdent pident)
+  NEGCHANNEL  pident -> M.NegChan
+                          (snd $ transPIdent pident)  
 
 
 getPosnChannel :: Channel -> M.PosnPair

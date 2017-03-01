@@ -277,7 +277,7 @@ data ProcessCommand
     | PROCESS_SPLIT TokSplit Channel [Channel]
     | PROCESS_FORK TokFork PIdent [ForkPart]
     | Process_PLUG [PlugPart]
-    | Procss_ID Channel Channel
+    | Procss_ID Channel PChannel
     | PROCESScase TokCase Term [ProcessPhrase]
   deriving (Eq, Ord, Show, Read)
 

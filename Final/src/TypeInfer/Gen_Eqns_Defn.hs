@@ -152,8 +152,8 @@ takeCareofProcDefn defn@(ProcessDefn (pname,mfunType,pattProc,posn)) = do
             Left errormsg -> do 
                 let
                    emsg = ["Type error in process <<",show pname, ">> defined ",
-                           printPosn posn, "\n", errormsg,"\n\n",
-                           prettyStyle zigStyle procEqns] 
+                           printPosn posn, "\n", errormsg,"\n\n"]
+                           --prettyStyle zigStyle procEqns] 
 
                 left $ concat emsg 
 
