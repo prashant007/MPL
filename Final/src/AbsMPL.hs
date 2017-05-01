@@ -177,7 +177,7 @@ data Protocol
     | PROTOCOLpar Protocol Protocol
     | PROTOCOLget TokGetProt Type Protocol
     | PROTOCOLput TokPutProt Type Protocol
-    | PROTOCOLneg TokNeg Protocol
+    | PROTOCOLneg Protocol
     | PROTOCOLtopbot TokTopBot
     | PROTNamedWArgs UIdent [Type]
     | PROTNamedWOArgs UIdent
@@ -240,7 +240,7 @@ data Term
 data LetWhere = DEFN_LetWhere Defn | PATTTERM_LetWhere PattTerm
   deriving (Eq, Ord, Show, Read)
 
-data PattTerm = JUSTPATTTERM Pattern Term
+data PattTerm = JUSTPATTTERM PIdent Term
   deriving (Eq, Ord, Show, Read)
 
 data ConstantType
@@ -278,6 +278,7 @@ data ProcessCommand
     | PROCESS_FORK TokFork PIdent [ForkPart]
     | Process_PLUG [PlugPart]
     | Procss_ID Channel PChannel
+    | PROCESS_NEG Channel Channel
     | PROCESScase TokCase Term [ProcessPhrase]
   deriving (Eq, Ord, Show, Read)
 

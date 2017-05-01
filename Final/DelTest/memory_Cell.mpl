@@ -14,7 +14,7 @@ protocol IntTerm (A) => P =
       Close    :: TopBot    => P  
                     
 protocol Passer (A) => P = 
-      Pass :: A (+) A (*) P => P 
+      Pass :: A (+) Neg (A) (*) P => P 
 
 proc memory = 
   x | ch => -> do 
@@ -66,11 +66,13 @@ proc p1 =
         hput PUT on mm 
         put x on  mm
         fork nmpp  as
-            nm -> 
+            nm -> do 
               nm |=| neg mm
 
             pp -> 
                p1( | => pp,io) 
+
+
 
 run  => intTerm1,intTerm2 -> do 
    plug  

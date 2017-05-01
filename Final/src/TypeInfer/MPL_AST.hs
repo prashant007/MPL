@@ -97,7 +97,7 @@ instance () => Out (Type)
 
 instance Show Type where
   show (Unit _) 
-      = "Unit" 
+      = "()" 
 
   show (TypeVar (x,posn))
       = x 
@@ -273,6 +273,7 @@ data Pattern =   ConsPattern (String,[Pattern],PosnPair)
                | StrConstPattern(String,PosnPair)
                | IntConstPattern(Int,PosnPair) 
                | DontCarePattern PosnPair 
+               | NoPattern PosnPair
                deriving (Eq,Show,Generic)
 
 instance () => Out (Pattern)
@@ -290,6 +291,7 @@ data Term =  TRecord [(Pattern,Term,PosnPair)]
            | TDest   (Name,[Term],PosnPair)
            | TProd   ([Term],PosnPair)
            | TDefault PosnPair
+           | TError ErrorMsg
           deriving (Eq,Show,Generic)
 
 data LetWhere =   LetDefn Defn 
@@ -336,6 +338,7 @@ data ProcessCommand
      | PPlug  ([PChannel],(Process,Process),PosnPair)
      | PId    (PChannel,Channel,PosnPair)
      | PCase  (Term,[PattProc],PosnPair)
+     | PNeg   (PChannel,PChannel,PosnPair)
      deriving (Eq,Show,Generic)
 
 instance () => Out (ProcessCommand)

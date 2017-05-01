@@ -222,6 +222,7 @@ getPattPosn patt
               StrConstPattern(_,pn)-> pn 
               IntConstPattern(_,pn)-> pn  
               DontCarePattern pn   -> pn 
+              NoPattern       pn   -> pn     
 
 getProcPosn :: ProcessCommand -> PosnPair 
 getProcPosn comm 
@@ -249,6 +250,8 @@ getProcPosn comm
               PId    (_,_,pn) -> 
                   pn
               PCase  (_,_,pn) ->
+                  pn 
+              PNeg (_,_,pn) -> 
                   pn 
 -- ================================================================================
 -- ================================================================================
@@ -549,6 +552,9 @@ getCommName comm
               PCase  (_,_,pn) ->
                   genCommMsg ("Case",pn)
 
+              PNeg (_,_,pn) -> 
+                  genCommMsg ("Neg",pn)
+
 
 genCommMsg :: (String,PosnPair) -> String
 genCommMsg (str,pn)
@@ -573,62 +579,6 @@ getAllProcNames defns = map getProcDefnName defns
 
 getProcDefnName :: Defn -> Name 
 getProcDefnName (ProcessDefn (pname,_,_,_)) = pname 
-
-{-
-dualiseProt :: Type -> Type 
-dualiseProt t 
-    = case t of
-          Get (gt1,gt2,pn) ->
-              Put 
-                  (gt1,dualiseProt gt2,pn)
-
-          Put (pt1,pt2,pn) -> 
-              Get
-                  (pt1,dualiseProt pt2,pn)
-
-          Neg pair ->
-              fst pair  
-
-          TopBot pn ->
-              TopBot pn 
-
-          ProtNamed (pnm,pts,ppn) ->
-              ProtNamed
-                  (pnm,map dualiseProt pts,ppn)         
-
-          CoProtNamed (pnm,pts,ppn) ->
-              CoProtNamed
-                  (pnm,map dualiseProt pts,ppn)  
-
-          ProtTensor (pt1,pt2,pn) -> 
-              ProtPar 
-                  (dualiseProt pt1,dualiseProt pt2,pn)
-
-          ProtPar (pt1,pt2,pn) -> 
-              ProtTensor 
-                  (dualiseProt pt1,dualiseProt pt2,pn)
-
-          TypeFun (its,ot,pn) -> 
-              TypeFun 
-                  (map dualiseProt its,dualiseProt ot,pn)
-
-          otherwise -> 
-              t 
-
-
-normaliseNeg :: Type -> Type 
-normaliseNeg oType@(Neg (nType,nPn))
-    = case nType of 
-          TypeVarInt _ ->
-              oType
-          Neg snPair ->
-              fst snPair 
-          otherwise ->
-              dualiseProt nType
-
--}
-
-
 
 -- ===================================================================================
 -- ===================================================================================

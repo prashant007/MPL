@@ -1037,10 +1037,10 @@ transProtocol x = case x of
       return $ 
          M.Put (tType,tProt1,gPosn) 
 
-  PROTOCOLneg tokneg protocol ->  do 
+  PROTOCOLneg protocol ->  do 
       tProt1 <- transProtocol protocol 
       return $ 
-          M.Neg (tProt1,transTokNeg tokneg)
+          M.Neg (tProt1,E.getTypePosn tProt1)
 
   PROTOCOLtopbot toktopbot -> do 
       return $ 
@@ -1174,12 +1174,22 @@ transPattTermPharse x = case x of
   PATTERNshort patterns term -> do 
         tTerm  <- transTerm term 
         tPatts <- mapM transPattern patterns
-        let
-          tPosn  = E.getPattPosn (head tPatts)
-        return $ (
-                   (tPatts,Left tTerm),
-                   tPosn
-                 )  
+        case tPatts /= [] of 
+          True -> do 
+            let
+              tPosn  = E.getPattPosn (head tPatts)
+            return $ (
+                       (tPatts,Left tTerm),
+                       tPosn
+                     ) 
+
+          False ->  do 
+            let
+              tPosn  = E.getTermPosn tTerm
+            return $ (
+                       ([M.NoPattern tPosn],Left tTerm),
+                       tPosn
+                     ) 
       
   PATTERNguard patterns guardedterms -> do 
         tTerms <- mapM transGuardedTerm guardedterms
@@ -1187,6 +1197,43 @@ transPattTermPharse x = case x of
         let 
           tPosn  = E.getPattPosn (head tPatts)
         return ((tPatts,Right tTerms),tPosn)
+
+{-
+Throw an error if there are no default guards 
+if there is only default guard get back a term instead of a guard.
+switch
+   | default = term is just term 
+
+otherise return the normal guarded term
+-}
+checkGuards :: [M.GuardedTerm] -> 
+               Either M.ErrorMsg (Either M.Term [M.GuardedTerm])
+checkGuards guards = do 
+    let 
+      (termL,termR) = (last guards) 
+      remGuards     = init guards   
+    case termL of 
+      M.TDefault _ -> 
+        case remGuards of 
+          [] -> do
+            return (Left termR) 
+
+          otherwise -> do 
+            return (Right guards)
+
+      otherwise  -> do 
+        let 
+          emsg
+            = "Last guard needs to be a default" ++
+               E.printPosn (E.getTermPosn termL)
+
+        error $ unlines
+            [
+              "\n",E.equalS,E.equalS,"*********Error*********",
+              emsg,E.equalS,E.equalS
+            ] 
+
+
 
 transGuardedTerm :: GuardedTerm -> State [(String,[M.Name])] M.GuardedTerm
 transGuardedTerm x = case x of
@@ -1573,10 +1620,12 @@ transLetWhere lwhs
 
 transPattTerm :: PattTerm -> 
                  State [(String,[M.Name])] (M.Pattern,M.Term)
-transPattTerm (JUSTPATTTERM patt term) = do 
-         tPatt <- transPattern patt 
+transPattTerm (JUSTPATTTERM pident term) = do 
+         let 
+           (strpn,str) = transPIdent pident
+           varPatt     = M.VarPattern (str,strpn)
          tTerm <- transTerm term 
-         return (tPatt,tTerm)  
+         return (varPatt,tTerm)  
 
 
 detectFun :: M.Name -> M.FuncName
@@ -1836,7 +1885,16 @@ transProcessCommand x = case x of
       tTerm  <- transTerm term
       pProcs <- mapM transProcessPhrase processphrases
       return $ M.PCase 
-          (tTerm,pProcs,transTokCase tokcase)  
+          (tTerm,pProcs,transTokCase tokcase) 
+
+  PROCESS_NEG ch1 ch2 -> do 
+      return $
+          M.PNeg
+            (
+               transChannel ch1,
+               transChannel ch2,
+               getPosnChannel ch1 
+             ) 
 
 -- ===============================================================
 -- ===============================================================
@@ -1970,6 +2028,9 @@ getChfromComm pcomm
 
           M.PId    (ch1,ch2,_) -> 
               ([ch1,extractChan ch2],[])
+
+          M.PNeg (ch1,ch2,pn) ->
+              ([ch1,ch2],[])
 
           M.PCase  (_,pattPList,_) ->
               (chs,dchs)

@@ -43,18 +43,7 @@ fun f1 =
 fun f2 = 
         x  -> f1(x)    
 
-mutual
-   fun mfun1 =
-         a, b,c -> mfun2 (a,c)
-
-   fun mfun2 =
-         "sthg",c -> 0
-         x,c      -> mfun3 (x,c)
-
-   fun mfun3 = 
-        a,c -> mfun1 (a,0,c)          
-
-
+{-
 fun listofList = 
      [] -> []
      (x:xs) -> ([x] : listofList (xs))    
@@ -63,3 +52,5 @@ fun flattenTree =
     t -> fold t of 
         Leaf : val   = [val] 
         Node : t1,t2 = append (t1,t2) 
+
+-}

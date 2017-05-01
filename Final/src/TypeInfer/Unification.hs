@@ -359,8 +359,11 @@ substInTExpr (x,t) texpr
                       ) 
 
               Neg (nt,pn) ->
-                  Neg (substInTExpr (x,t) nt,pn)
-                    
+                  case nt of 
+                      Neg (nnt,pn) ->  
+                          substInTExpr (x,t) nnt 
+                      otherwise ->  
+                          Neg (substInTExpr (x,t) nt,pn)
                     
 
               ProtNamed (nm,ts,pn) ->

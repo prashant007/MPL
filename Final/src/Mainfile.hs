@@ -14,6 +14,8 @@ import TypeInfer.SolveHelper
 import TypeInfer.Unification
 import TypeInfer.SymTab_Insert
 import TypeInfer.Gen_Eqns_CommFuns
+import ToCMPL.PatternCompiler
+import ToCMPL.LambdaLift
 
 
 import System.Environment
@@ -21,8 +23,6 @@ import Control.Monad.Trans.State.Lazy
 import Text.PrettyPrint
 import Text.PrettyPrint.GenericPretty
 import Control.Monad.Trans.Either
-
-
 
 
 myLLexerMPL = resolveLayout True .myLexer

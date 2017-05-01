@@ -309,7 +309,7 @@ fun_Let :: (Term,[LetWhere],PosnPair) ->
 
 fun_Let (term,letwhrs,posn) = do 
         (initNum,typeLet,context,_,symTab) <- get 
-        modify $ \(n,tt,c,chC,st) -> (1,0,[],chC,symTab)
+        modify $ \(n,tt,c,chC,st) -> (n+1,tt+1,context,chC,symTab)
         let 
           ldefns    = filter isLetDefn letwhrs
           lremPatts = letwhrs \\ ldefns
@@ -321,9 +321,9 @@ fun_Let (term,letwhrs,posn) = do
           newSymTab = insert_ST newDefns symTab NewScope
         -- patt,Terms will be evaluated in the old context and
         -- new symtab.once their evaluation is done the symtab it
-        -- took in is returned alogn with an updated context in which
+        -- took in is returned along with an updated context in which
         -- the term part of the let is evaluated.   
-        modify $ \(n,tt,c,chC,st) -> (initNum,typeLet,context,chC,newSymTab)
+        modify $ \(n,tt,c,chC,st) -> (n,typeLet,context,chC,newSymTab)
         thngList <- genNewVarList (length remPatts)
         pattEqns <- letPattTermEqns remPatts thngList
         termEqns <- genEquationsList [term] [typeLet]
@@ -769,7 +769,6 @@ takeCareofFunDefns :: [Defn] ->
                    EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
                                     ([Defn],Log,[TypeEqn])
 takeCareofFunDefns []    = do 
-         let 
          return ([],[],[])
 
 takeCareofFunDefns defns = do

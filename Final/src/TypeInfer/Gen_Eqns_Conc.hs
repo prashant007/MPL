@@ -23,7 +23,7 @@ genEquations_PComm :: ProcessCommand ->
 genEquations_PComm  
         = foldPCommand fun_Run fun_Close fun_Halt fun_Get fun_Put fun_HPut
                        fun_HCase fun_Split fun_Fork fun_Plug fun_Id  
-                       fun_PCase                    
+                       fun_PCase fun_PNeg                    
 
 genEquations_Proc :: [ProcessCommand] -> 
                      EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) [TypeEqn]
@@ -66,10 +66,11 @@ foldPCommand :: ((Name,[Term],[PChannel],[PChannel],PosnPair) -> b) ->
                 (([PChannel],(Process,Process),PosnPair) -> b) ->
                 ((PChannel,Channel,PosnPair) -> b) ->
                 ((Term,[PattProc],PosnPair) -> b) ->
+                ((PChannel,PChannel,PosnPair) -> b) ->
                 ProcessCommand -> b 
 
 foldPCommand fRun fClose fHalt fGet fPut fHPut fHCase
-             fSplit fFork fPlug fPid fPCase pcomms 
+             fSplit fFork fPlug fPid fPCase fPNeg pcomms 
         = case pcomms of 
               PRun rargs -> 
                   fRun rargs
@@ -94,7 +95,9 @@ foldPCommand fRun fClose fHalt fGet fPut fHPut fHCase
               PId idargs ->   
                   fPid idargs  
               PCase pattProcs ->
-                  fPCase pattProcs                       
+                  fPCase pattProcs   
+              PNeg chPair -> 
+                  fPNeg chPair                    
        
 -- ==========================================================================
 -- ==========================================================================    
@@ -487,7 +490,7 @@ fun_Run (name,terms,ichs,ochs,pn) = do
                         Right outEqns -> do 
                           let 
                             finEqns = TQuant ([],termVars ++ uvars)
-                                       (seqEqns++inEqns++outEqns)
+                                       (seqEqns++ termEqns ++ inEqns++outEqns)
                           return ([finEqns],1)
                                 
 
@@ -793,4 +796,28 @@ fun_Id (chl,chr,pn) = do
                           eqn = TSimp (prot1,Neg (prot2,pn))
                         return ([eqn],1)    
 
+
+-- ============================================================================
+-- ============================================================================ 
+-- ch1 should be added in the channel context and its
+-- protcol should be Neg (Protocol of Ch1)
+
+fun_PNeg :: (PChannel,PChannel,PosnPair) -> 
+            EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
+               ([TypeEqn],EndFlag) 
+fun_PNeg (ch1,ch2,pn) = do 
+    (_,_,_,chanCont,symTab) <- get
+    case lookup ch2 chanCont of 
+        Nothing -> 
+            left $ "Trying to negate channel <<" ++ ch2 
+                   ++ ">> that doesn't exist" ++ printPosn pn 
+        Just (pol2,prot2) -> do 
+            protVar <- genNewVar
+            let 
+              prot1     = TypeVarInt protVar      
+              simpEqn   = TSimp (prot1,Neg(prot2,pn))  
+              eqn1      = TQuant ([],[protVar]) [simpEqn]
+              newChCont = (ch1,(pol2,prot1)):chanCont 
+            modify $ \(n,tt,c,chC,sym) -> (n,tt,c,newChCont,sym)
+            return ([eqn1],0) 
 

@@ -196,7 +196,7 @@ eitherResIdent tv s = treeFind resWords
                               | s == a = t
 
 resWords :: BTree
-resWords = b "and" 17 (b ":)" 9 (b ")" 5 (b "(+)" 3 (b "(*)" 2 (b "(" 1 N N) N) (b "(:" 4 N N)) (b "->" 7 (b "," 6 N N) (b ":" 8 N N))) (b "<" 13 (b ":=" 11 (b "::" 10 N N) (b ";" 12 N N)) (b "=>" 15 (b "=" 14 N N) (b ">" 16 N N)))) (b "switch" 26 (b "neg" 22 (b "else" 20 (b "do" 19 (b "as" 18 N N) N) (b "into" 21 N N)) (b "on" 24 (b "of" 23 N N) (b "plug" 25 N N))) (b "{" 30 (b "where" 28 (b "then" 27 N N) (b "with" 29 N N)) (b "|=|" 32 (b "|" 31 N N) (b "}" 33 N N))))
+resWords = b "and" 18 (b ":)" 9 (b ")" 5 (b "(+)" 3 (b "(*)" 2 (b "(" 1 N N) N) (b "(:" 4 N N)) (b "->" 7 (b "," 6 N N) (b ":" 8 N N))) (b "=" 14 (b ";" 12 (b ":=" 11 (b "::" 10 N N) N) (b "<" 13 N N)) (b ">" 16 (b "=>" 15 N N) (b "Neg" 17 N N)))) (b "switch" 27 (b "neg" 23 (b "else" 21 (b "do" 20 (b "as" 19 N N) N) (b "into" 22 N N)) (b "on" 25 (b "of" 24 N N) (b "plug" 26 N N))) (b "{" 31 (b "where" 29 (b "then" 28 N N) (b "with" 30 N N)) (b "|=|" 33 (b "|" 32 N N) (b "}" 34 N N))))
    where b s n = let bs = id s
                   in B bs (TS bs n)
 

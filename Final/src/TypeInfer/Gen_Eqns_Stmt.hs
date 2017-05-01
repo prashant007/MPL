@@ -38,8 +38,8 @@ testFunction mplstmts = do
             case outChoice of
                 "1" -> do 
                     putStrLn $ printAllTypes tripList 
-                "2" -> do 
-                  mapM_ (putStrLn.show) symtab                 
+                --"2" -> do 
+                --  mapM_ (putStrLn.show) symtab                 
                 otherwise -> do 
                    putStrLn "Enter Function number\n"
                    funno <- fmap (\x -> (read x)::Int) getLine 

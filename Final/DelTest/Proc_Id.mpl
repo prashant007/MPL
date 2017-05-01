@@ -14,6 +14,35 @@ protocol InfPut (A) => P =
 protocol Passer (A) => P = 
       Pass :: A (+) A (*) P => P 
 
+
+data List(A) -> C = Nil  ::   -> C
+                    Cons :: A,C -> C 
+
+fun f0 =
+      []       -> "abc"
+      (x:xs)   -> x
+
+
+fun f1 =
+      (x:xs)  -> let v1 
+                   where
+                     v1 = f2 (xs) 
+                     fun f2 = 
+                        (y:xs)  ->  1 + f3(xs) 
+                     fun f3 = 
+                        [] -> 0
+                        
+  
+
+
+defn of 
+     fun f12 = 
+        ys  -> f13(ys) 
+     fun f13 = 
+        []  -> 1
+        zs  -> f12 (zs) 
+
+
 proc p1 = 
   | console => w1 -> do 
        hput GetIntC on console

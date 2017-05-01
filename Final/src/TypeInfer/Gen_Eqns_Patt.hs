@@ -34,9 +34,11 @@ fold_Pattern :: ((String,[Pattern],PosnPair) -> b) ->
                 ((String,PosnPair) -> b) ->
                 ((Int,PosnPair) -> b) ->
                 (PosnPair -> b) ->
+                (PosnPair -> b) ->
                 Pattern -> b  
 
-fold_Pattern pattCons pattDest pattprod pattvar pattconstStr pattconstInt pattdcare p  
+fold_Pattern pattCons pattDest pattprod pattvar pattconstStr 
+             pattconstInt pattdcare pattNo p  
         = case p of
               ConsPattern (str,patts,posn) ->
                   pattCons (str,patts,posn)
@@ -59,13 +61,16 @@ fold_Pattern pattCons pattDest pattprod pattvar pattconstStr pattconstInt pattdc
               DontCarePattern posn ->
                  pattdcare posn 
 
+              NoPattern pn ->
+                pattNo pn  
+
 
 genPattEqns :: Pattern -> 
                EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) [TypeEqn]
 genPattEqns patt 
         = fold_Pattern funPattCons funPattDest funPattProd funPattVar 
                        funConstStringPattern funConstIntPattern 
-                       funPattDCare patt   
+                       funPattDCare funNoPatt patt   
 
 -- =========================================================================================
 -- ========================================================================================= 
@@ -266,6 +271,15 @@ funConstIntPattern (constStr,posn) = do
 funPattDCare :: PosnPair -> EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) [TypeEqn]
 funPattDCare posn = do  
         return []
+
+-- =========================================================================================
+-- ========================================================================================= 
+funNoPatt :: PosnPair -> EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) [TypeEqn]
+funNoPatt posn = do  
+        (_,typeNoPatt,context,_,symTab) <- get 
+        let 
+          eqn = TSimp (TypeVarInt typeNoPatt,Unit posn)
+        return [eqn]  
 
 -- =========================================================================================
 -- ========================================================================================= 
