@@ -226,7 +226,7 @@ convDefn defn
 
         M.Codata(dcls,pn) -> do 
             let 
-              tDcls = map transDcl dcls
+              tDcls = map transCdcl dcls
             return $ C.Codata (pn,head tDcls)
 
         M.TypeSyn (tsyms,pn) -> 
