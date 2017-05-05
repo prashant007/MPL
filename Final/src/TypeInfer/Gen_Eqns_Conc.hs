@@ -63,7 +63,7 @@ foldPCommand :: ((Name,[Term],[PChannel],[PChannel],PosnPair) -> b) ->
                 ((PChannel,[(Name,Process,PosnPair)],PosnPair) -> b) ->
                 ((PChannel,(PChannel,PChannel),PosnPair) -> b) ->
                 ((PChannel,[(PChannel,[PChannel],Process)],PosnPair) -> b) ->
-                (([PChannel],(Process,Process),PosnPair) -> b) ->
+                (([PChannel],(([PChannel],Process),([PChannel],Process)),PosnPair) -> b) ->
                 ((PChannel,Channel,PosnPair) -> b) ->
                 ((Term,[PattProc],PosnPair) -> b) ->
                 ((PChannel,PChannel,PosnPair) -> b) ->
@@ -722,10 +722,10 @@ help_Fork (ch1,uchs1,proc1) (ch2,uchs2,proc2) (pol,prot,pn) delChCon = do
 -- ============================================================================
 -- ============================================================================
 
-fun_Plug :: ([PChannel],(Process,Process),PosnPair) -> 
+fun_Plug :: ([PChannel],(([PChannel],Process),([PChannel],Process)),PosnPair) -> 
              EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
                ([TypeEqn],EndFlag) 
-fun_Plug (chs,(proc1,proc2),pn) = do 
+fun_Plug (chs,((chsP1,proc1),(chsP2,proc2)),pn) = do 
     (num,_,context,chanCont,symTab) <- get
     newVars   <- genNewVarList (length chs) 
     let 

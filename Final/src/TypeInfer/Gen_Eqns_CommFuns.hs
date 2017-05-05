@@ -8,8 +8,8 @@ import Control.Monad.Trans.Either
 import Data.List 
 import System.Console.ANSI
 
-equalS = replicate 90 '='
-stars  = replicate 90 '*'
+equalS = replicate 70 '='
+stars  = replicate 70 '*'
 
 getParamVars :: Type -> [String]
 getParamVars typeP = nub (getTypeVars typeP)
@@ -644,6 +644,20 @@ isQuantEqn eqn
               TSimp _ ->
                   False   
 
+
+isProtData :: Defn -> Bool 
+isProtData defn = case defn of 
+        Data   _ -> 
+            True
+        Codata _ ->
+            True
+        ProtocolDefn _ ->
+            True
+        CoprotocolDefn _ ->
+            True
+        otherwise ->
+            False     
+  
 
 putStrLnRed :: String -> IO ()
 putStrLnRed str = do 

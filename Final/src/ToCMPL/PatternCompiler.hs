@@ -7,11 +7,49 @@ import TypeInfer.Gen_Eqns_CommFuns
 
 import TypeInfer.SymTab_DataType
 import TypeInfer.SymTab 
+import TypeInfer.SymTab_Init
 
 
 import Control.Monad.State.Lazy
 import Control.Monad.Trans.Either
 import Data.List 
+
+delFun :: MPL -> Either ErrorMsg MPL 
+delFun mpl 
+    = case pattCompile mpl of 
+        Left emsg -> 
+          Left emsg 
+        Right iMPL -> 
+          Right $ pushTotop iMPL  
+
+-- ================================================================
+-- ================================================================
+
+pushTotop :: MPL -> MPL 
+pushTotop stmts 
+      = [
+         pushToTop_help (init stmts) ([],pn),
+         last stmts
+        ]
+  where 
+    DefnStmt (_,_,pn) = head stmts 
+                 
+
+pushToTop_help :: [Stmt] -> ([Defn],PosnPair) ->  Stmt 
+pushToTop_help [] (fDefns,pn)
+      = DefnStmt (fDefns,[],pn) 
+
+pushToTop_help (stmt:rest) (iDefns,pn)
+      = pushToTop_help rest (iDefns ++ defns ,pn)
+  where  
+    defns = pushToTop_Stmt stmt
+
+pushToTop_Stmt :: Stmt -> [Defn] 
+pushToTop_Stmt (DefnStmt (defns,stmts,_))
+    = defns ++ (concat $ map pushToTop_Stmt stmts)    
+
+-- ================================================================
+-- ================================================================
 
 eMsgCase :: (FuncName,PosnPair) -> Term  
 eMsgCase (fnm,fpn) 
@@ -19,15 +57,36 @@ eMsgCase (fnm,fpn)
         "Error in compiling Pattern: In function <<" 
         ++ show fnm ++ ">>" ++ printPosn fpn 
 
+
+pattCompile :: MPL -> Either ErrorMsg MPL 
+pattCompile mpl = cMPL  
+    where 
+      newMPL = pushTotop mpl 
+      DefnStmt (defns,_,_)
+             = head newMPL 
+      pdDefns= filter isProtData defns 
+      symTab = insert_ST pdDefns toBeginSymTab OldScope  
+      stVal  = runEitherT (pattCompile_MPL newMPL)
+      cMPL   = evalState stVal (1,0,[],[],symTab) 
+
+
+
+pattCompile_MPL :: MPL ->
+        EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable))
+                MPL 
+pattCompile_MPL stmts = do 
+  tStmts <- mapM pattCompile_Stmt stmts
+  return tStmts  
+
 pattCompile_Stmt :: Stmt -> 
         EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable))
                 Stmt 
 pattCompile_Stmt stmt = do 
     case stmt of 
-      DefnStmt (defns,stmts,pn) -> do 
-        newStmts <- mapM pattCompile_Stmt stmts 
+      DefnStmt (defns,[],pn) -> do 
+        --newStmts <- mapM pattCompile_Stmt stmts 
         newDefns <- mapM pattCompile_Defn defns 
-        return $ DefnStmt (defns,stmts,pn)
+        return $ DefnStmt (newDefns,[],pn)
 
       otheriwse ->
         return stmt    
@@ -39,6 +98,7 @@ pattCompile_Defn :: Defn ->
 
 pattCompile_Defn defn = do 
     (_,_,_,_,symTab) <- get 
+    modify $ \(n,a,b,c,d) -> (1,0,b,c,d)
     case defn of 
         FunctionDefn (fName,fType,pairList,pn) -> do 
             let

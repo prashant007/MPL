@@ -335,7 +335,7 @@ data ProcessCommand
      | PHCase (PChannel,[(Name,Process,PosnPair)],PosnPair)
      | PSplit (PChannel,(PChannel,PChannel),PosnPair)
      | PFork  (String,[(PChannel,[PChannel],Process)],PosnPair)
-     | PPlug  ([PChannel],(Process,Process),PosnPair)
+     | PPlug  ([PChannel],(([PChannel],Process),([PChannel],Process)),PosnPair)
      | PId    (PChannel,Channel,PosnPair)
      | PCase  (Term,[PattProc],PosnPair)
      | PNeg   (PChannel,PChannel,PosnPair)

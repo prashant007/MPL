@@ -22,33 +22,47 @@ testFunction mplstmts = do
       stEith  = runEitherT (takeCareofMPL mplstmts) 
       eithVal = evalState stEith (1,0,[],[],toBeginSymTab)    
     case eithVal of 
+      Left emsg -> 
+        putStrLnRed $ unlines
+                    [
+                      "\n",equalS,equalS,emsg,
+                      equalS,equalS
+                    ]  
+
+      Right (symtab,tripList)  -> do
+        putStrLn $ unlines
+                     [equalS,equalS,"See types of all functions or details of one?","\n",
+                      "1 for all","\n","Anything else for details of one",equalS,equalS] 
+        outChoice <- getLine
+        case outChoice of
+          "1" -> do 
+             putStrLn $ printAllTypes tripList 
+            
+          otherwise -> do 
+             putStrLn "Enter Function number\n"
+             funno <- fmap (\x -> (read x)::Int) getLine 
+             let 
+               partTriple = tripList !! (funno-1)              
+             putStrLn $ unlines ["1 for type","2 for Equations","3 for logs"]            
+             inchoice <- getLine
+             putStrLn $ printType partTriple inchoice
+
+
+typeMPL :: MPL -> Either String String   
+typeMPL mplstmts = do 
+    let 
+      stEith  = runEitherT (takeCareofMPL mplstmts) 
+      eithVal = evalState stEith (1,0,[],[],toBeginSymTab)    
+    case eithVal of 
         Left emsg -> 
-            putStrLnRed $ unlines
-                        [
-                          "\n",equalS,equalS,emsg,
-                          equalS,equalS
-                        ]  
+            Left $ 
+              unlines [
+                        "\n",equalS,equalS,emsg,equalS,equalS
+                      ]  
 
         Right (symtab,tripList)  -> do
-            --putStrLn $ show symtab
-            putStrLn $ unlines
-                         [equalS,equalS,"See types of all functions or details of one?","\n",
-                          "1 for all","\n","Anything else for details of one",equalS,equalS] 
-            outChoice <- getLine
-            case outChoice of
-                "1" -> do 
-                    putStrLn $ printAllTypes tripList 
-                --"2" -> do 
-                --  mapM_ (putStrLn.show) symtab                 
-                otherwise -> do 
-                   putStrLn "Enter Function number\n"
-                   funno <- fmap (\x -> (read x)::Int) getLine 
-                   let 
-                     partTriple = tripList !! (funno-1)              
-                   putStrLn $ unlines ["1 for type","2 for Equations","3 for logs"]            
-                   inchoice <- getLine
-                   putStrLn $ printType partTriple inchoice
-
+            Right $ printAllTypes tripList 
+                
 
 printAllTypes :: [([Defn],Log,[TypeEqn])] -> String 
 printAllTypes quadList = concat $ map (\q -> printType q "1") quadList
@@ -110,16 +124,23 @@ takeCareofMPL :: MPL -> EitherT ErrorMsg (State (Int,TypeThing,Context,ChanConte
 takeCareofMPL stmts = do 
         (_,_,_,_,origSTab) <- get 
         let 
-          alldCdstmts
-                  = filter isDataProtStmt stmts
-          allDorProtDefns 
-                  = map getDataProt alldCdstmts
-          symTab  = insert_ST allDorProtDefns origSTab NewScope 
-          remStmts= stmts \\ alldCdstmts
+          (symTab,remStmts) = updateSymTab  stmts origSTab 
         modify $ \(n,tt,c,chC,st) -> (1,0,[],[],symTab)  
         triples <-  takeCareofStmtList remStmts
         (_,_,_,_,newsTab) <- get 
         return (newsTab,triples)  
+
+
+updateSymTab :: [Stmt] -> SymbolTable -> (SymbolTable,[Stmt])
+updateSymTab stmts origSTab
+      = (symTab,remStmts)
+  where 
+    alldCdstmts
+            = filter isDataProtStmt stmts
+    allDorProtDefns 
+            = map getDataProt alldCdstmts
+    symTab  = insert_ST allDorProtDefns origSTab NewScope 
+    remStmts= stmts \\ alldCdstmts
 
 
 
@@ -200,11 +221,6 @@ takeCareofStmt stmt
           triple <- takeCareofDefn procDefn
           return [triple]
           
-          --return [([],[],[])]
-
-
-
-
 
 -- ===============================================================================
 -- ===============================================================================
@@ -231,16 +247,4 @@ isProcDefn defn = case defn of
         (ProcessDefn _) -> True
         otherwise       -> False 
 
-isProtData :: Defn -> Bool 
-isProtData defn = case defn of 
-        Data   _ -> 
-            True
-        Codata _ ->
-            True
-        ProtocolDefn _ ->
-            True
-        CoprotocolDefn _ ->
-            True
-        otherwise ->
-            False       
 

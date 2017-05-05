@@ -1,51 +1,140 @@
-module MPLToCMPLConverter where 
-import qualified TypesCoreMPL as C
+module ToCMPL.MPLToCMPL where 
+import qualified CMPL.TypesCoreMPL as C
 import qualified TypeInfer.MPL_AST as M 
+import qualified TypeInfer.Gen_Eqns_CommFuns as Comm 
+import qualified CMPL.TypesAMPL as A 
+
+import Control.Monad.State
+import Data.List 
 
 type PairList = [(C.Name,C.Name)]
 
-getFTypePn :: M.FunType -> C.PosnPair 
+getFTypePn :: M.FunType -> A.PosnPair 
 getFTypePn fType 
     = case fType of 
         M.NoType ->
           (0,0)
         M.StrFType (_,sType) -> 
-          getTypePosn sType 
-        IntFType (_,itype) ->
-          getTypePosn iType  
+          Comm.getTypePosn sType 
+        M.IntFType (_,iType) ->
+          Comm.getTypePosn iType  
+
+convMPL :: M.MPL -> C.MPLProg
+convMPL mpl = evalState (convMPL_help mpl) ([],[])  
+
+convMPL_help :: M.MPL -> State (PairList,PairList) C.MPLProg
+convMPL_help stmts = do 
+    tDefn <- mapM convStmt stmts 
+    let 
+      finDefns= concat tDefn 
+      idefns  = C.Includes []
+      ddefns  = filter isCoreData   finDefns 
+      cddefns = filter isCoreCodata finDefns 
+      pdefns  = filter isCoreProt   finDefns 
+      cpdefns = filter isCoreCoprot finDefns
+      fundefns= filter isCoreFun    finDefns  
+      procdefn= filter isCoreProc   finDefns 
+      mainDefn= filter isCoreMain   finDefns
+    return $ C.MPLProg idefns ddefns cddefns pdefns 
+                       cpdefns fundefns procdefn (head mainDefn)  
+
+
+isCoreData :: C.Defn -> Bool 
+isCoreData defn 
+    = case defn of 
+        C.Data _  -> True 
+        otherwise -> False 
+
+isCoreCodata :: C.Defn -> Bool 
+isCoreCodata defn 
+    = case defn of 
+        C.Codata _  -> True 
+        otherwise   -> False 
+
+isCoreProt :: C.Defn -> Bool 
+isCoreProt defn 
+    = case defn of 
+        C.Protocol _ -> True 
+        otherwise    -> False 
+
+isCoreCoprot :: C.Defn -> Bool 
+isCoreCoprot defn 
+    = case defn of 
+        C.CoProtocol _ -> True 
+        otherwise      -> False
+
+isCoreFun :: C.Defn -> Bool 
+isCoreFun defn 
+    = case defn of 
+        C.Function _ -> True 
+        otherwise    -> False 
+
+isCoreProc :: C.Defn -> Bool 
+isCoreProc defn 
+    = case defn of 
+        C.Process _ -> True 
+        otherwise   -> False 
+
+isCoreMain :: C.Defn -> Bool 
+isCoreMain defn 
+    = case defn of 
+         C.MainRun _ -> True 
+         otherwise   -> False  
+
+
+getDatProt_Defns :: [M.Defn] -> (PairList,PairList) -> (PairList,PairList) 
+getDatProt_Defns [] accList
+    = accList
+getDatProt_Defns (d:ds) accList
+    = getDatProt_Defns ds newaccList
+  where     
+    newaccList = getDatProt_Defn d accList
+
+
+getDatProt_Defn :: M.Defn -> (PairList,PairList) -> (PairList,PairList)
+getDatProt_Defn defn (dcdList,pcpList) 
+    = case defn of 
+        M.Data _ ->
+          (convData defn ++ dcdList,pcpList)
+        M.Codata _ ->
+          (convData defn ++ dcdList,pcpList)
+        M.ProtocolDefn _ ->
+          (dcdList,convProt defn ++ pcpList) 
+        M.CoprotocolDefn _ -> 
+          (dcdList,convProt defn ++ pcpList) 
+
 
 convProt :: M.Defn -> [(C.Name,C.Name)]
 convProt defn 
     = case defn of 
-        ProtocolDefn (pcls,pn) -> 
-          undefined 
-        CoprotocolDefn (pcls,pn) -> 
-          undefined 
+        M.ProtocolDefn (pcls,pn) -> 
+          handlePcls pcls 
 
--- (ProtName,[ProtocolPhrase])
+        M.CoprotocolDefn (pcls,pn) -> 
+          handlePcls pcls  
+
 handlePcls :: [M.ProtocolClause] -> [(C.Name,C.Name)]
-handlePcls pcls 
-      =
-  where 
-      tPcls = map transPcl pcls 
+handlePcls = (concat.map handlePcls_help.map transPcl)
 
+handlePcls_help :: C.ProtocolClause -> [(C.Name,C.Name)]
+handlePcls_help ((pnm,_),hnms)
+    = map (\(h,hpn) -> (h,pnm)) hnms  
 
 transPcl :: M.ProtocolClause -> C.ProtocolClause
-transPcl (pName,pPhrs) = (pnm,map () pPhrs)
-    where 
+transPcl (pName,pPhrs) 
+      = ((pnm,hPosn),hands)
+    where
+      hands = map (\(n,fType) -> (n,getFTypePn fType)) pPhrs  
+      hPosn = (snd.head) hands 
       M.DataName (pnm,_) 
-          = pName  
+            = pName  
 
-
-  
 convData :: M.Defn -> [(C.Name,C.Name)]
-convData (Data  (dcls,pn))
+convData (M.Data  (dcls,pn))
         = handleDecls dcls 
 
-convData (Codata(dcls,pn))
-        = handleDecls dcls 
-
--- (NamePnPair,[NamePnPair])
+convData (M.Codata(dcls,pn))
+        = handleCdDecls dcls 
 
 handleDecls :: [M.DataClause] -> [(C.Name,C.Name)]
 handleDecls dcls
@@ -53,15 +142,33 @@ handleDecls dcls
   where 
       tDcls = map transDcl dcls 
 
+
+handleCdDecls :: [M.DataClause] -> [(C.Name,C.Name)]
+handleCdDecls dcls
+    = concat $ map (\((n,p),cs) -> map (\c -> ((fst.fst)c, n)) cs) tDcls 
+  where 
+      tDcls = map transCdcl dcls 
+
+
 transDcl :: M.DataClause -> C.DataClause
 transDcl (dnm,dphrs)
-        = ((dnm,dpn),conses)
+        = ((nm,dpn),conses)
     where 
        M.DataName (nm,_) 
            = dnm
        conses
            = map transDPhr dphrs 
-       dpn = (snd.fst.head) nDphrs  
+       dpn = (snd.fst.head) conses  
+
+transCdcl :: M.DataClause -> C.DataClause
+transCdcl (dnm,dphrs)
+        = ((nm,dpn),conses)
+    where 
+       M.DataName (nm,_) 
+           = dnm
+       conses
+           = map transCDPhr dphrs 
+       dpn = (snd.fst.head) conses  
 
 transDPhr :: M.DataPhrase -> C.Constructor 
 transDPhr (nm,fType,num) 
@@ -69,22 +176,42 @@ transDPhr (nm,fType,num)
     where 
       fPn = getFTypePn fType 
 
+transCDPhr :: M.DataPhrase -> C.Constructor 
+transCDPhr (nm,fType,num) 
+        = ((nm,fPn),(num-1,fPn))
+    where 
+      fPn = getFTypePn fType 
+
 -- ===============================================
 -- ===============================================
 
-convStmt :: M.Stmt -> [C.Defn] 
+convStmt :: M.Stmt -> State (PairList,PairList) [C.Defn] 
 convStmt stmt 
     = case stmt of 
-        M.DefnStmt (defns,stmts,pn) ->
-          map convStmt stmts ++ 
-          map convDefn defns 
+        M.DefnStmt (defns,stmts,pn) -> do 
+          (dcdList,pcpList) <- get
+          case stmts == [] of 
+            True  -> do 
+              let
+                pdDefns= filter Comm.isProtData defns
+                (addDCD_D,addPCP_D) 
+                   = getDatProt_Defns pdDefns ([],[])
 
-        M.RunStmt (fType,ichs,ochs,pcoms,pn) -> 
-            [C.MainRun (pn,ichsN,ochsN,pcomsN)]
-          where 
-            ichsN  = map (\n -> (n,pn)) ichs 
-            ochsN  = map (\n -> (n,pn)) ochs 
-            pcomsN = map convPCom pcoms  
+              modify $ \(d,p) -> (d ++ addDCD_D,p ++ addPCP_D)         
+              tDefns <- mapM convDefn defns 
+              return tDefns                  
+
+            False -> do 
+              let 
+                emsg = "There shouldn't be any statement in the" ++
+                       "where part of defn" ++ Comm.printPosn pn  
+              error emsg 
+
+
+        M.RunStmt (fType,ichs,ochs,pcoms,pn) -> do 
+          (ichsN,ochsN,pcomsN) <- genChPComTrip (ichs,ochs,pcoms,pn)   
+          return [C.MainRun (pn,ichsN,ochsN,pcomsN)]
+
 
 -- ===============================================
 -- ===============================================
@@ -95,12 +222,12 @@ convDefn defn
         M.Data(dcls,pn) -> do 
             let 
               tDcls = map transDcl dcls
-            return $ C.Data (pn,tDcls)
+            return $ C.Data (pn,head tDcls)
 
         M.Codata(dcls,pn) -> do 
             let 
               tDcls = map transDcl dcls
-            return $ C.Codata (pn,tDcls)
+            return $ C.Codata (pn,head tDcls)
 
         M.TypeSyn (tsyms,pn) -> 
             undefined 
@@ -108,12 +235,12 @@ convDefn defn
         M.ProtocolDefn (pcls,pn) -> do 
             let 
               tPcls = map transPcl pcls
-            return $ C.Protocol (pn,tPcls)
+            return $ C.Protocol (pn,head tPcls)
 
         M.CoprotocolDefn (pcls,pn) -> do 
             let 
               tPcls = map transPcl pcls
-            return $ C.Coprotocol (pn,tPcls)
+            return $ C.CoProtocol (pn,head tPcls)
 
         M.FunctionDefn (fnm,fType,pattTerms,pn) -> do 
             let 
@@ -121,19 +248,20 @@ convDefn defn
                    = head pattTerms
               args = map pattToArgs patts 
               Left term 
-                   = eithTerm              
-            return $ C.Function (pn,transName pn fnm,args,term)
-           
+                   = eithTerm 
 
-        M.ProcessDefn  (nm,_,pattProc,pn) ->
-            C.Process (pn,(nm,pn),args,ichsN,ochsN,convProc proc)
-          where 
-            args  = map pattToArgs patts 
-            (patts,inchs,ochs,proc) 
-                  = pattProc
-            args  = map pattToArgs patts 
-            ichsN = map (\p -> (p,pn)) inchs 
-            ochsN = map (\p -> (p,pn)) ochs      
+            tTerm <- convTerm term                     
+            return $ C.Function (pn,transName pn fnm,args,tTerm)
+
+        M.ProcessDefn  (nm,_,pattProc,pn) -> do 
+            let 
+              args  = map pattToArgs patts 
+              (patts,inchs,ochs,proc) 
+                    = pattProc
+              ichsN = map (\p -> (p,pn)) inchs 
+              ochsN = map (\p -> (p,pn)) ochs
+            (tIs,tOs,tProc) <- genChPComTrip (inchs,ochs,proc,pn)   
+            return $ C.Process (pn,(nm,pn),args,tIs,tOs,tProc)   
 
         M.TermSyn termSyn ->
           undefined 
@@ -151,7 +279,12 @@ transName pn fname
             C.Custom (nm,pn)
 
         M.BuiltIn fn  -> 
-            case fn of 
+            C.Inbuilt (transBuiltIn fn,pn)
+
+
+transBuiltIn :: M.Func -> C.Func         
+transBuiltIn fn 
+    = case fn of 
               M.Add_I -> 
                 C.Add_I
 
@@ -234,8 +367,9 @@ convPCom pcom
        M.PGet   (patt,ch,pn) ->
           return $ C.PGet (pn,pattToArgs patt,(ch,pn)) 
 
-       M.PPut   (term,ch,pn) -> 
-          return $ C.PPut (pn,convTerm term,(ch,pn))
+       M.PPut   (term,ch,pn) -> do 
+          tTerm <- convTerm term 
+          return $ C.PPut (pn,tTerm,(ch,pn))
 
        M.PHPut  (nm,ch,pn) -> do 
             (dcdlist,pcplist) <- get
@@ -243,7 +377,7 @@ convPCom pcom
               Just prot -> do 
                 let 
                   handle = ((prot,pn),(nm,pn))
-                return $ C.PHPut (pn,handle,(ch,pn))
+                return $ C.PHput (pn,handle,(ch,pn))
 
               Nothing -> do 
                 let 
@@ -261,24 +395,28 @@ convPCom pcom
              C.PSplit (pn,(ch,pn),map (\c -> (c,pn)) [ch1,ch2])
 
        M.PFork  (str,trips,pn) -> do 
-          cTrips <- mapM handleForkTrip trips 
+          cTrips <- mapM (handleForkTrip pn) trips 
           return $ C.PFork (pn,(str,pn),cTrips)      
 
-       M.PPlug  (chs,(p1,p2),pn) -> do 
+       M.PPlug  (chs,((ch1,p1),(ch2,p2)),pn) -> do 
           let 
             chsN = map (\c -> (c,pn)) chs
+            ch1N = map (\x -> (x,pn)) ch1
+            ch2N = map (\x -> (x,pn)) ch2
+
           p1N <- mapM convPCom p1 
           p2N <- mapM convPCom p2 
-          return $ C.PPlug (chsN,(p1N,p2N),pn)
+          return $ C.PPlug (pn,chsN,(ch1N,p1N),(ch2N,p2N))
 
-       PId(pch,ch,pn) ->  
-          return $ PEqual (pn,pch,extractChan ch pn)    
+       M.PId(pch,ch,pn) ->  
+          return $ C.PEqual (pn,(pch,pn),extractChan ch pn)    
 
-       PCase (term,pattProcs,pn) -> do 
-           pattPsN <- map handlePattProc pattProcs 
-           termN   <- convTerm term 
+       M.PCase (term,pattProcs,pn) -> do 
+           pattPsN <- mapM handlePattProc pattProcs 
+           termN   <- convTerm term
+           return $ C.PCase (pn,termN,pattPsN) 
 
-       PNeg(pch1,pch2,pn) -> 
+       M.PNeg(pch1,pch2,pn) -> 
           undefined
 
 
@@ -304,9 +442,8 @@ Important Realiation - it is important to note here that all the patterns
 that are arguments of the constructors are var patterns
 -}
 convPatt :: M.Pattern ->
-            State (PairList,PairList)
-                  (C.NamePnPair,C.NamePnPair,[C.NamePnPair])
-convPatt (ConsPattern (cname,cpatts,pn)) = do  
+            State (PairList,PairList) C.Struct_Handle
+convPatt (M.ConsPattern (cname,cpatts,pn)) = do  
     (dcdlist,pcplist) <- get 
     case lookup cname dcdlist of 
       Just datName -> do
@@ -326,10 +463,10 @@ handleProcTrip ::(M.Name,M.Process,M.PosnPair) ->
                  State (PairList,PairList) C.ProcessPhrase_hcase
 handleProcTrip (hname,pcoms,pn) = do
     (dcdlist,pcplist) <- get 
-    case lookup handle pcplist of 
+    case lookup hname pcplist of 
         Just prot -> do 
           let 
-            compProt = (prot,hname)
+            compProt = ((prot,pn),(hname,pn))
           newProcs <- mapM convPCom pcoms 
           return (compProt,newProcs)
 
@@ -337,11 +474,11 @@ handleProcTrip (hname,pcoms,pn) = do
           let 
             emsg 
               = "No Protocol/Coprotocol found for handle/cohandle <<" 
-                 ++ nm ++ ">>" ++ Comm.printPosn pn 
+                 ++ hname ++ ">>" ++ Comm.printPosn pn 
           error emsg 
                   
 
-genChPComTrip:: ([M.Channel],[M.Channel],M.Process,M.PosnPair) -> 
+genChPComTrip:: ([M.PChannel],[M.PChannel],M.Process,M.PosnPair) -> 
         State (PairList,PairList) ([C.Channel],[C.Channel],C.Process)
 genChPComTrip (ichs,ochs,procs,pn) = do  
     let 
@@ -356,3 +493,167 @@ handleForkTrip pn (ch1,chs2,proc) = do
     (ichs,ochs,procN) <- genChPComTrip ([ch1],chs2,proc,pn)
     return (head ichs,ochs,procN)
 
+-- ===================================================================
+-- ===================================================================
+convTerm :: M.Term -> State (PairList,PairList) C.Term 
+convTerm term 
+    = case term of 
+        M.TRecord trips -> do
+          let
+            tPosn = ((\(x,y,z)-> z).head) trips
+          tRecs <- mapM handleRec trips
+          return $ C.TRec(tRecs,tPosn)
+           
+        M.TCallFun (fname,terms,pn) -> do 
+          tTerms <- mapM convTerm terms 
+          return $ C.TCall(transName pn fname,tTerms) 
+
+        M.TVar pair  -> 
+          return $ C.TVar pair
+
+        M.TConst(bval,pn)-> 
+          case bval of
+            M.ConstInt num -> 
+              return $ C.TConstI (num,pn)
+            M.ConstChar char ->
+              return $ C.TConstC (char,pn)
+            M.ConstString str ->
+              return $ C.TConstS (str,pn)
+            M.ConstDouble dbl ->
+              undefined                 
+
+        M.TCase (term,pattTermList,pn) -> do
+          tTerm    <- convTerm term 
+          pattDefs <- mapM convPattTerm pattTermList 
+          return $ C.TCase (tTerm,pattDefs,pn)
+
+        M.TCons (nm,terms,pn) -> do 
+          (dcdlist,pcplist) <- get 
+          case lookup nm dcdlist of 
+            Just datName -> do 
+              tTerms <- mapM convTerm terms  
+              let 
+                str_nm = ((datName,pn),(nm,pn))
+              return $ C.TCons (str_nm,tTerms)
+
+            Nothing -> do 
+              let 
+                emsg 
+                  = "No data type found for constructor <<" 
+                     ++ nm ++ ">>" ++ Comm.printPosn pn 
+              error emsg 
+
+        M.TDest (nm,terms,pn) -> do 
+          (dcdlist,pcplist) <- get 
+          case lookup nm dcdlist of 
+            Just datName -> do 
+              tTerms <- mapM convTerm terms 
+              let 
+                str_nm = ((datName,pn),(nm,pn))
+              return $ C.TCons (str_nm,(last tTerms):(init tTerms))
+
+            Nothing -> do 
+              let 
+                emsg 
+                  = "No data type found for constructor <<" 
+                     ++ nm ++ ">>" ++ Comm.printPosn pn 
+              error emsg 
+
+        M.TProd (terms,pn) -> do 
+          tTerms <- mapM convTerm terms 
+          return $ C.TProd tTerms
+
+-- ===================================================================
+-- ===================================================================
+
+convPattTerm :: M.PatternTermPhr -> State (PairList,PairList) C.PatternDef
+convPattTerm (patt:[],Left term) = do
+    (dcdlist,pcplist) <- get
+    let 
+      M.ConsPattern (cname,patts,pn) 
+          = patt  
+    case lookup cname dcdlist of
+        Just datName -> do 
+          tTerm <- convTerm term
+          let
+            args = map pattToArgs patts  
+            str_hand = ((datName,pn),(cname,pn),args)
+          return (str_hand,[tTerm])
+
+        Nothing -> do   
+          let 
+            emsg = "No data type found for constructor <<" 
+                   ++ cname ++ ">>" ++ Comm.printPosn pn 
+          error emsg 
+
+
+
+
+handleRec ::(M.Pattern,M.Term,M.PosnPair) ->
+            State (PairList,PairList) (C.Struct_Handle,C.Term) 
+handleRec (patt,term,_) = do
+    (dcdlist,pcplist) <- get  
+    let 
+      M.DestPattern (dest,dpatts,dpn) 
+             = patt 
+      args   = map pattToArgs dpatts
+
+    tTerm <- convTerm term  
+    case lookup dest dcdlist of 
+      Just dname -> do 
+        let 
+          st_hand = ((dname,dpn),(dest,dpn),args)
+        return (st_hand,tTerm)
+
+      Nothing -> do 
+        let 
+          emsg 
+            = "No codata type found for destructor <<" 
+               ++ dest ++ ">>" ++ Comm.printPosn dpn 
+        error emsg         
+
+-- ===================================================================
+-- =================================================================== 
+
+{-
+getChans :: M.ProcessCommand -> [M.PChannel]
+getChans pcom 
+    = case pcom of 
+        M.PRun(_,_,ichs,ochs,pn) ->
+          (ichs ++ ochs)
+        M.PClose (ch,pn) ->
+          [ch] 
+        M.PHalt (ch,pn) ->
+          [ch]
+        M.PGet (_,ch,pn) ->
+          [ch]
+        M.PPut (_,ch,pn) ->
+          [ch] 
+        M.PHPut (_,ch,pn) ->
+          [ch] 
+        M.PHCase (ch,_,pn) -> 
+          [ch]
+        M.PSplit(ch1,(ch2,ch3),pn) -> 
+          [ch1,ch2,ch3]
+
+        M.PFork(_,list,pn) -> 
+          nub $ concat $ map (getChan_fork pn) list 
+
+        M.PPlug  (pchs,(proc1,proc2),pn) ->
+          nub $ pchs ++ (concat $ map getChans (proc1 ++ proc2))
+
+        M.PId (pch,ch,pn) ->
+          [pch,fst ch1] 
+         where 
+           ch1 = extractChan ch pn 
+            
+        M.PCase  (_,pattProcs,pn) -> 
+          concat $ map getChans ((concat.map snd) pattProcs)
+
+        M.PNeg   (ch1,ch2,pn) ->
+          [ch1,ch2]  
+
+getChan_fork :: M.PosnPair -> (M.PChannel,[M.PChannel],M.Process) -> [M.PChannel] 
+getChan_fork pn (ch,chs,proc)
+    = (ch:chs) ++ (concat $ map getChans proc) 
+-}
