@@ -373,7 +373,7 @@ find_service (names,(n,Q_EMPTY,Q_HPUT 3 q):chs)
       return ([],(names,(n,Q_CLOSE,q):chs))
 -------------------------------------------------------------------------------------
 find_service (names,(n,Q_HPUT 1 (Q_GET (s,t,e,c)),Q_EMPTY):chs)  = do
-    liftIO $ threadDelay 10000
+    --liftIO $ threadDelay 10000
     liftIO $ hSetSGR stdout  [(SetConsoleIntensity BoldIntensity),(SetColor Foreground Vivid Blue)]
     mvar' <- get 
     let mapping = M.lookup n mvar'
@@ -411,7 +411,7 @@ find_service (names,(n,Q_HPUT 1 (Q_GET (s,t,e,c)),Q_EMPTY):chs)  = do
 ---------------------------------------------------------------------------------
 find_service (names,(n,Q_HPUT 2 (Q_PUT m  q),Q_EMPTY):chs)   = do 
     mvar' <- get 
-    liftIO $ threadDelay 10000
+    --liftIO $ threadDelay 10000
     let mapping = M.lookup n mvar'
         mapping' = M.toList $ mvar' 
     case mapping of
@@ -450,7 +450,7 @@ find_service (names,(n,Q_HPUT 3 q, Q_EMPTY):chs)  = do
     case mapping of 
          Just (port,socket,handle,boolArg,tchan) -> do
            liftIO $ sClose socket
-           liftIO $ threadDelay 10000
+           liftIO $ threadDelay 100000
          Nothing -> error "Error closing channel"                                     
     return ([],(names,(n,q,Q_HALT):chs))
 

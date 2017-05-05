@@ -63,7 +63,7 @@ communicate sock bool1 ch (comm,val,num) = do
     b <- atomically $ newTChan
     --b <- newTChanIO 
     (h,host,po) <- accept sock
-    threadDelay 100000
+    --threadDelay 100000
     forkIO $ communicateT sock  h b bool1 ch  (comm,val,num)
     return (b,h) 
 
