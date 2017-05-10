@@ -243,8 +243,10 @@ convTerm t  =
                                          AC_PRODELEM (intPosnToCInteger (n,snd str_posn))
                                                      (convPIdent str_posn)
                                        ]   
-
-
+        
+        C.TError emsg -> 
+                      return $ [AC_EMSG emsg]  
+                             
 {-
                           (fstrs_posn,coms) <- convTCall_Custom terms ([],[]) 
                           return $ coms ++ [
@@ -273,7 +275,13 @@ getTermPosn term =
         C.TConstS (_,posn)  -> posn  
         C.TConstC (_,posn)  -> posn
         C.TConstI (_,posn)  -> posn
-        C.TRec    (_,posn)  -> posn 
+        C.TRec    (_,posn)  -> posn
+        C.TProd   ts        -> getTermPosn (head ts)
+        C.TProdElem (_,_,pn)-> pn 
+        C.TError _          -> (0,0)    
+
+
+
 
 -------------------------------------------------------------------------
 -------------------------------------------------------------------------

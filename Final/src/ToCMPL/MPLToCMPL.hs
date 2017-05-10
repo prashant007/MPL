@@ -267,7 +267,9 @@ convDefn defn
           undefined 
 
         M.OperatorDefn (str,eith,pn) ->    
-          undefined       
+          undefined 
+
+
 
 -- ===============================================
 -- ===============================================
@@ -562,6 +564,11 @@ convTerm term
         M.TProd (terms,pn) -> do 
           tTerms <- mapM convTerm terms 
           return $ C.TProd tTerms
+
+        M.TError emsg -> 
+          return $ C.TError emsg 
+
+
 
 -- ===================================================================
 -- ===================================================================

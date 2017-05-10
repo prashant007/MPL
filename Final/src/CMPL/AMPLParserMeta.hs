@@ -193,6 +193,7 @@ AC_RUNf    .COM ::= Run PIdent "(" [PIdent] "|" [PIdent] "=>" [PIdent] ")" ;
 AC_IDF     .COM ::= PIdent Ch_Id PIdent ;
 AC_PROD    .COM ::= "(" [PIdent] ")" ;
 AC_PRODELEM.COM ::= "#" CInteger "(" PIdent ")" ;
+AC_EMSG    .COM ::= String ;
 
 
 

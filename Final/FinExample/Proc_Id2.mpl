@@ -8,6 +8,9 @@ protocol IntTerm (A) => P =
     PutInt   :: Put (A|P) => P
     Close    :: TopBot    => P  
 
+
+data List(A) -> C = Nil  ::   -> C
+                    Cons :: A,C -> C 
 {-
 protocol InfPut (A) => P = 
     Putter :: Put (A|P) => P 
@@ -18,10 +21,33 @@ protocol Passer (A) => P =
 -}
 
 defn of 
+    {-
+
     fun f0 =
-          []       -> "abc"
-          (x:xs)   -> x
-    
+          []       -> []
+          x        -> x
+
+
+    fun append = 
+          []     ,ys  -> ys 
+          (x:xs) ,ys  -> x:append (xs,ys) 
+
+
+
+    fun zip = 
+       []   , []     -> []  
+       []   , y:ys   -> [] 
+       x:xs , []     -> []  
+       x:xs , (y:ys) -> <x,y>:zip(xs,ys)
+  -}
+
+    fun zip = 
+       --[]   , []     -> [] 
+       []   , []     -> []   
+       --[]   , ys   -> [] 
+       x:xs , (y:ys) -> xs
+
+
     {-  
 
     fun f1 =
@@ -32,16 +58,17 @@ defn of
                             (y:xs)  ->  1 + f3(xs) 
                          fun f3 = 
                             [] -> 0
-    -} 
+
     fun f12 = 
       ys  -> f13(ys) 
 
     fun f13 = 
       []  -> 1
       zs  -> f12 (zs) 
+
   where 
-    data List(A) -> C = Nil  ::   -> C
-                        Cons :: A,C -> C 
+
+    -} 
 
 proc p1 = 
   | console => w1 -> do 

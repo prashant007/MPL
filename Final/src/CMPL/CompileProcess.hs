@@ -134,6 +134,9 @@ compile_common pcoms@(cf:rest)  = do
             rest' <- compile_common rest  
             return $ largs ++ ((AMC_PRODELEM n ): rest')    
 
+         AC_EMSG emsg -> 
+            return $ [AMC_ERROR emsg] 
+
          othcomm  -> do 
             case fst ginf of
                 "fun"      -> error $ "Process code in a function???!"

@@ -254,34 +254,36 @@ fun_CallFun :: (FuncName,[Term],PosnPair) ->
                EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable))
                [TypeEqn]
 fun_CallFun (fname,terms,posn) = do 
-        (_,typeLFun,context,_,symTab) <- get
-        case lookup_ST (Val_Fun (fname,posn)) symTab of 
-            Right valRet -> do 
-                let 
-                  argLen = length terms
-                (fuvars,fintypes,strOutType,nargs) <- remove_ValRet_Fun valRet posn 
-                case (argLen == nargs) of 
-                    True  -> do 
-                        newVars  <- genNewVarList nargs
-                        termEqns <- genEquationsList terms newVars
-                        modify $ \(n,tt,c,chC,st) -> (n,tt,context,chC,st)
-                        let
-                          compOutEqn
-                                   = TSimp (TypeVarInt typeLFun,strOutType) 
-                          compEqns = zipWith (\x y -> TSimp (TypeVarInt y,x)) fintypes newVars
-                          finEqns  = TQuant ([],fuvars++newVars)
-                                            (compOutEqn:(compEqns++ termEqns))
-                        return [finEqns]  
+    (_,typeLFun,context,_,symTab) <- get
+    case lookup_ST (Val_Fun (fname,posn)) symTab of 
+      Right valRet -> do 
+        let 
+          argLen = length terms
+        (fuvars,fintypes,strOutType,nargs) <- remove_ValRet_Fun valRet posn
 
-                    False -> do 
-                        let
-                          emsg 
-                            = "Function <<" ++ show fname ++ ">> " ++ printPosn posn ++
-                              "called with incorrect number of arguments.Expected " 
-                               ++ show nargs ++ " , got " ++ show argLen 
-                        left emsg       
-            Left emsg    ->   
-               left emsg
+        case (argLen == nargs) of 
+          True  -> do 
+            newVars  <- genNewVarList nargs
+            termEqns <- genEquationsList terms newVars
+            modify $ \(n,tt,c,chC,st) -> (n,tt,context,chC,st)
+            let
+              compOutEqn
+                       = TSimp (TypeVarInt typeLFun,strOutType) 
+              compEqns = zipWith (\x y -> TSimp (TypeVarInt y,x)) fintypes newVars
+              finEqns  = TQuant ([],fuvars++newVars)
+                                (compOutEqn:(compEqns++ termEqns))
+            return [finEqns]  
+
+          False -> do 
+            let
+              emsg 
+                = "Function <<" ++ show fname ++ ">> " ++ printPosn posn ++
+                  "called with incorrect number of arguments.Expected " 
+                   ++ show nargs ++ " , got " ++ show argLen 
+            left emsg  
+
+      Left emsg    ->   
+        left emsg
 
 
 remove_ValRet_Fun :: ValRet -> PosnPair -> 
@@ -293,8 +295,11 @@ remove_ValRet_Fun (ValRet_Fun (ftype,nargs)) posn  = do
         let 
           (uVars,itypes,otype,sposn)
               = stripFunType renFType posn 1 
-        return (uVars,itypes,otype,nargs)
-
+        case itypes == [Unit (0,0)] && nargs == 1 of 
+          True ->
+            return (uVars,itypes,otype,0)
+          False -> 
+            return (uVars,itypes,otype,nargs)
 
 
 -- =========================================================================================

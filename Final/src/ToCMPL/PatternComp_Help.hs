@@ -22,7 +22,7 @@ type Equation = ([Pattern],Term)
 data Match =  MatchFun  (FuncName,PosnPair) 
                         [String] [Equation] 
                         Term
-              deriving (Eq,Generic)
+              deriving (Eq,Generic,Show)
 
 instance () => Out (Match)
 
@@ -61,7 +61,8 @@ rearrangeEqns :: [Equation] -> (FuncName,PosnPair) -> Term ->
 rearrangeEqns eqns fPair@(fname,fPosn) defTerm = do 
     (_,_,_,_,symTab) <- get 
     let 
-      allPatts = map (head.fst) eqns 
+      allPatts = map (head.fst) eqns
+      lenPatts = (length.fst.head) eqns  
       ConsPattern (consName,_,posn)
               = head allPatts
       pConses = nub $ map getConsName allPatts  
@@ -71,7 +72,11 @@ rearrangeEqns eqns fPair@(fname,fPosn) defTerm = do
           left emsg
       
       Right retVal -> do 
+        pVars <- genNewVarList (lenPatts-1)   
+
         let 
+          paddPatts
+                 = map (\x -> VarPattern ("padd_V_" ++ show x,(0,0))) pVars
           ValRet_Cons ((datName,allConses),_,_,_)
                  = retVal 
           miss_cons = allConses \\ pConses
@@ -87,7 +92,7 @@ rearrangeEqns eqns fPair@(fname,fPosn) defTerm = do
               left emsg 
 
             True -> do 
-              meqns <- mapM (\x -> missing_Eqn x fPair defTerm) miss_cons
+              meqns <- mapM (\x -> missing_Eqn x fPair defTerm paddPatts) miss_cons
               -- prioritise constructors
               let 
                 priCons = zip allConses [1..]
@@ -99,10 +104,10 @@ rearrangeEqns eqns fPair@(fname,fPosn) defTerm = do
 
 -- This function is going to generate equations for the missing constructors.
 -- The term on the right hand side is going to be the default term  
-missing_Eqn :: Name -> (FuncName,PosnPair) -> Term ->
+missing_Eqn :: Name -> (FuncName,PosnPair) -> Term -> [Pattern] ->
         EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable))
                 Equation
-missing_Eqn consName (fnm,fpn) defTerm = do   
+missing_Eqn consName (fnm,fpn) defTerm paddPatts = do   
     (_,_,_,_,symTab) <- get 
     let 
       eithVal = lookup_ST (Val_Cons (consName,fpn)) symTab
@@ -122,19 +127,11 @@ missing_Eqn consName (fnm,fpn) defTerm = do
                  ">> is not present in a pattern in function <<"++ show fnm 
                  ++ ">>" ++ printPosn fpn 
 
-          newVPatts= map (\x ->  VarPattern ("v_" ++ show x,fpn)) intArgs
-          consPatt = [ConsPattern (consName,newVPatts,fpn)]
-
-        case defTerm of 
-          TError _ -> do 
-            let 
-              eqn = (consPatt,TError emsg)
-            return eqn 
-
-          otherwise -> do 
-            let 
-              eqn = (consPatt,defTerm)
-            return eqn 
+          newVPatts= map (\x ->  VarPattern ("fv" ++ show x,fpn)) intArgs
+          consPatt = ConsPattern (consName,newVPatts,fpn)
+          finPatt  = consPatt:paddPatts        
+          eqn = (finPatt,defTerm)
+        return eqn 
 
 
 
@@ -156,8 +153,8 @@ categoriseEqns []   = return []
 categoriseEqns eqns = do 
    tripList <- assignPrior eqns
    let 
-     gEqns  = groupBy (\x y -> boolCond_Group x y) tripList
-     sEqns  = map (sortEqns) gEqns          
+     gEqns  = groupEqns tripList
+     sEqns  = map (sortEqns) gEqns                
      finEqns= map (map getAfromABC) sEqns
    return finEqns
 
@@ -183,7 +180,20 @@ sortEqns :: [(Equation,Int,Int)] -> [(Equation,Int,Int)]
 sortEqns  = sortBy boolCond_Sort
 
 groupEqns :: [(Equation,Int,Int)] -> [[(Equation,Int,Int)] ]
-groupEqns = groupBy boolCond_Group 
+groupEqns eqns = groupBy boolCond_Group fEqns 
+     where 
+       fEqns = gEqns_help eqns   
+
+gEqns_help :: [(Equation,Int,Int)] -> [(Equation,Int,Int)]
+gEqns_help = sortBy group_sort
+
+group_sort ::  (Equation,Int,Int) -> 
+               (Equation,Int,Int) -> Ordering
+group_sort (_,n1,_) (_,n2,_)
+        | n1 > n2  = GT 
+        | n1 < n2  = LT 
+        | n1 == n2 = EQ  
+
 
 
 boolCond_Sort ::  (Equation,Int,Int) -> 
@@ -427,3 +437,5 @@ substInDefn subst defn
           FunctionDefn (fnm,fType,substInFun subst fbody,pn)
 
         otherwise -> defn 
+
+

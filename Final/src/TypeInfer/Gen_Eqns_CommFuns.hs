@@ -8,8 +8,11 @@ import Control.Monad.Trans.Either
 import Data.List 
 import System.Console.ANSI
 
-equalS = replicate 70 '='
-stars  = replicate 70 '*'
+equalS :: String
+equalS = replicate 80 '='
+
+stars :: String
+stars  = replicate 80 '*'
 
 getParamVars :: Type -> [String]
 getParamVars typeP = nub (getTypeVars typeP)

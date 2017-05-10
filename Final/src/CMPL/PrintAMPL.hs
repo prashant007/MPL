@@ -398,6 +398,7 @@ instance Print COM where
     AC_IDF pident1 chid pident2 -> prPrec i 0 (concatD [prt 0 pident1, prt 0 chid, prt 0 pident2])
     AC_PROD pidents -> prPrec i 0 (concatD [doc (showString "("), prt 0 pidents, doc (showString ")")])
     AC_PRODELEM cinteger pident -> prPrec i 0 (concatD [doc (showString "#"), prt 0 cinteger, doc (showString "("), prt 0 pident, doc (showString ")")])
+    AC_EMSG str -> prPrec i 0 (concatD [prt 0 str])
     AC_CLOSEf close pident -> prPrec i 0 (concatD [prt 0 close, prt 0 pident])
     AC_HALTf halt pidents -> prPrec i 0 (concatD [prt 0 halt, prt 0 pidents])
   prtList _ [] = (concatD [])

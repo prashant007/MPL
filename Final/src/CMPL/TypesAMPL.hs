@@ -71,7 +71,8 @@ data AMPLCOM  =
         |AMC_DEST Int Int 
         |AMC_ID CH CH     
         |AMC_PROD Int -- no of elements in the product
-        |AMC_PRODELEM Int -- here int is the element number of the tuple    
+        |AMC_PRODELEM Int -- here int is the element number of the tuple 
+        |AMC_ERROR String   
         deriving (Eq,Ord,Show,Read,Generic)
 
 instance () => Out (AMPLCOM )
@@ -252,6 +253,7 @@ data COM =
  | AC_RECORDf PosnPair [(STRUCTOR_NAME,[NamePnPair],COMS)]
  | AC_PROD [NamePnPair]  
  | AC_PRODELEM PosnPair Int NamePnPair
+ | AC_EMSG String 
   deriving (Eq,Ord,Show,Read,Generic)
 
 instance () => Out (COM)

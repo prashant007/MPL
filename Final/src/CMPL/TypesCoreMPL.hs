@@ -72,6 +72,7 @@ data Term                =    TCall   (FuncName,[Term])
                             | TRec    ([(Struct_Handle,Term)],PosnPair)
                             | TProd   [Term]
                             | TProdElem (Int,Term,PosnPair)
+                            | TError String 
                             deriving  (Eq,Show,Read,Generic)
 
 instance () => Out (Term)

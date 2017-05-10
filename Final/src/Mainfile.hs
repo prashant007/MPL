@@ -20,6 +20,7 @@ import qualified CMPL.AMPL_am as AM
 
 
 import ToCMPL.PatternCompiler
+import ToCMPL.PatternComp_Help
 import ToCMPL.LambdaLift
 
 
@@ -62,20 +63,26 @@ main = do
                        finMPL_AST = pattCompile astMPL 
                      case finMPL_AST of 
                        Left mplEmsg -> 
-                          putStrLn mplEmsg
+                          putStrLn $ unlines 
+                            [equalS,equalS,mplEmsg,equalS,equalS]
 
-                       Right fMPL  -> do  
+                       Right fMPL  -> do
                           let 
-                            astCMPL   = convMPL fMPL  
+                            astCMPL   = convMPL fMPL
+
                             ptreeAMPL = CP.convEverything astCMPL
                             ampl_prog = PA.printTree ptreeAMPL
                             astAMPL   = SA.transAMPLCODE ptreeAMPL
+                          {-
                             mach      = CALL.compile_all astAMPL
                           --putStrLn $ prettyStyle zigStyle cMPL_AST
                           putStrLn ampl_prog
                           ans <- evalStateT (AM.run_cm' mach) (Map.empty)
                           let ans' = prettyStyle zigStyle ans 
                           putStrLn ans' 
+                         -}
+                          putStrLn ampl_prog
+
                            
 
             Bad s -> do 

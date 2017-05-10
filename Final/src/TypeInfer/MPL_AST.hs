@@ -19,7 +19,11 @@ type DataClause     = (DataName,[DataPhrase])
 type DataPhrase     = (Name,FunType,NumArgs)
 
 data DataName       = DataName (Name,[Param])
-                     deriving (Eq,Show,Generic) 
+                     deriving (Eq,Generic) 
+
+instance Show DataName where
+  show (DataName (dnm,dargs)) 
+      = dnm ++ "(" ++ intercalate ", " dargs ++ ")"
 
 instance () => Out (DataName)
 type ProtName       = DataName 
@@ -318,7 +322,7 @@ data FuncName =   Custom  Name
 
 instance Show FuncName where 
   show (Custom name) 
-      = show name 
+      = name 
   show (BuiltIn func) 
       = show func 
 

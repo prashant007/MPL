@@ -54,8 +54,8 @@ pushToTop_Stmt (DefnStmt (defns,stmts,_))
 eMsgCase :: (FuncName,PosnPair) -> Term  
 eMsgCase (fnm,fpn) 
     = TError $
-        "Error in compiling Pattern: In function <<" 
-        ++ show fnm ++ ">>" ++ printPosn fpn 
+        "Error in compiling Pattern: Function <<" 
+        ++ show fnm ++ ">>" ++ printPosn fpn ++ " is NOT TOTAL.\n"
 
 
 pattCompile :: MPL -> Either ErrorMsg MPL 
@@ -107,12 +107,12 @@ pattCompile_Defn defn = do
             newArgs <- genNewVarList numArgs
             newPattTerm <- mapM handleEithTerm pattTerms
             let 
-              strArgs = map (\x -> "v_" ++ show x) newArgs
+              strArgs = map (\x -> "fv" ++ show x) newArgs
               varPatts= map (\x -> VarPattern (x,pn)) strArgs
               eithTerm= eMsgCase (fName,pn) 
               match   = MatchFun (fName,pn) strArgs newPattTerm eithTerm 
 
-            newTerm <- normalize_Match match 
+            newTerm <- normalize_Match match 0
 
             let 
               newPList= [((varPatts,Left newTerm),pn)]
@@ -128,45 +128,55 @@ pattCompile_Defn defn = do
 This function handles the base case of the normalize_Match function
 -}
 
-checkpattList :: (FuncName,PosnPair) ->  [Equation] -> Term -> 
+checkpattList :: (FuncName,PosnPair) ->  [Equation] -> Term -> Int ->
      EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable))
              Term 
 
-checkpattList (fn,pn) pattTermList defTerm = do 
+checkpattList (fn,pn) pattTermList defTerm flag = do 
     let
       allPatts  = map fst pattTermList
       nonempty  = filter (\x -> x /= []) allPatts
     case nonempty == [] of 
-      True  ->
-        return $ (snd.head) pattTermList
+      True  -> do 
+        let 
+          term = (snd.head) pattTermList
+        case (flag == 0,term) of 
+          (True,TError emsg) -> 
+            left emsg 
+
+          otherwise -> 
+            return term
 
       False -> do 
-        case defTerm of 
-          TError emsg -> 
-            left emsg
-          othTerm -> 
-            return $ othTerm 
+        case (flag == 0,defTerm) of 
+          (True,TError emsg)  ->
+              left emsg 
+             
+          otherwise -> 
+              return defTerm
 
 
 
-normalize_Match :: Match -> 
+normalize_Match :: Match -> Int ->
      EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable))
              Term
-normalize_Match (MatchFun fnPair [] pattTermList defTerm)
-    = checkpattList fnPair pattTermList defTerm
+normalize_Match (MatchFun fnPair [] pattTermList defTerm) flag 
+    = checkpattList fnPair pattTermList defTerm flag
 
-normalize_Match m@(MatchFun fnPair args pattList defTerm) = do 
+normalize_Match m@(MatchFun fnPair args pattList defTerm) flag = do 
     (_,_,_,_,symTab) <- get  
     case (ruleType pattList) of 
       0 -> 
-        normalize_Match (handleVarPatt m) 
+        normalize_Match (handleVarPatt m) flag 
 
       1 -> do
         eqns <- rearrangeEqns pattList fnPair defTerm 
-        handleConsPatt args fnPair defTerm eqns
+        --error $ show eqns ++ "\n\n" ++ show pattList
+        handleConsPatt args fnPair defTerm eqns flag
 
       otherwise -> do 
-          handleMixedPatt args fnPair defTerm pattList
+        --error $ concat $ map (\x -> show x ++ "\n\n") pattList
+        handleMixedPatt args fnPair defTerm pattList
 
 
 
@@ -196,11 +206,11 @@ This is the case where all the first patterns are constructors.
 -}
 
 
-handleConsPatt :: [String] -> (FuncName,PosnPair) -> Term -> [[Equation]] -> 
+handleConsPatt :: [String] -> (FuncName,PosnPair) -> Term -> [[Equation]] -> Int ->
      EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable))
              Term 
-handleConsPatt (u:us) fnPair@(fn,fpn) defTerm eqns = do 
-    pattTermList <- mapM (\eq -> genPattTerm us fnPair defTerm eq) eqns
+handleConsPatt (u:us) fnPair@(fn,fpn) defTerm eqns flag = do 
+    pattTermList <- mapM (\eq -> genPattTerm us fnPair defTerm eq flag) eqns
     let 
       term = TCase (TVar(u,fpn),pattTermList,fpn)
     return $ term   
@@ -214,21 +224,25 @@ case construct.
 
 -}
 
-genPattTerm :: [String] -> (FuncName,PosnPair) -> Term -> [Equation] -> 
+genPattTerm :: [String] -> (FuncName,PosnPair) -> Term -> [Equation] -> Int ->
      EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable))
              PatternTermPhr
-genPattTerm us fnPair defTerm eqns@((patts,_):ps) = do
-    let 
-      ConsPattern (cn,args,pn) = head patts  
-    newVars <- genNewVarList (length args)
-    let  
-      newArgs     = map (\x -> "v_" ++ show x) newVars 
-      pattArgs    = map (\x -> VarPattern (x,pn)) newArgs
-      newheadPatt = ConsPattern (cn,pattArgs,pn)
-      newEqns     = getPattHelper eqns 
-      newMatch    = MatchFun fnPair (newArgs++us) newEqns defTerm
-    newTerm <- normalize_Match newMatch   
-    return ([newheadPatt],Left newTerm)
+genPattTerm us fnPair defTerm eqns@((patts,_):ps) flag = do
+    case head patts of 
+      ConsPattern (cn,args,pn)  -> do   
+          newVars <- genNewVarList (length args)
+          let  
+            newArgs     = map (\x -> "fv" ++ show x) newVars 
+            pattArgs    = map (\x -> VarPattern (x,pn)) newArgs
+            newheadPatt = ConsPattern (cn,pattArgs,pn)
+            newEqns     = getPattHelper eqns 
+            newMatch    = MatchFun fnPair (newArgs++us) newEqns defTerm
+          newTerm <- normalize_Match newMatch flag   
+          return ([newheadPatt],Left newTerm)
+
+      otheriwse -> 
+          error $ show patts   
+
 
 
 getPattHelper :: [Equation] -> [Equation]
@@ -238,9 +252,7 @@ getPattHelper ((ConsPattern (cn,patts,pn):ps,term):rest)
     = (patts ++ ps,term):getPattHelper rest
 
 
-
-
-
+-- (MatchFun fnPair args pattList defTerm)
 
 {- This is the mixed case -}
 handleMixedPatt :: [String] -> (FuncName,PosnPair) -> Term -> [Equation] ->
@@ -249,13 +261,17 @@ handleMixedPatt :: [String] -> (FuncName,PosnPair) -> Term -> [Equation] ->
 handleMixedPatt uvars fnPair defterm [eqn] = do  
     let 
       match = MatchFun fnPair uvars [eqn] defterm
-    normalize_Match match
+    normalize_Match match 1
 
 handleMixedPatt uvars fnPair defterm (eqn:eqns)  = do 
-    newTerm <- handleMixedPatt uvars fnPair defterm eqns 
+    let 
+      match0 = MatchFun fnPair uvars eqns defterm
+    newTerm <- normalize_Match match0 1  
     let 
       match = MatchFun fnPair uvars [eqn] newTerm
-    normalize_Match match 
+    --error $ show (eqn:eqns) 
+
+    normalize_Match match 1
 
 
 -- ===============================================================
@@ -311,4 +327,3 @@ handleLet (TLet (lterm,lwhrs,pn)) = do
       newAllDefLWhrs = map (\d -> LetDefn d) newDefns 
       finLWhrs       = remLWhrs ++ newAllDefLWhrs   
     handleLet_help finLWhrs lterm pn 
-

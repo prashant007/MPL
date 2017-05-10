@@ -190,6 +190,7 @@ CUST_IN_FUNC     . Term6  ::= FIdent "(" [Term] ")" ;
 RECORDTERMALT    . Term6  ::= Rec "of" "{" [RecordEntryAlt] "}"  ; 
 PRODTERM         . Term6  ::= "<" [Term] ">" ;
 GET_ELEM         . Term6  ::= "#" CInteger "(" Term6 ")" ;
+ERROR_MSG        . Term6  ::= String ;
 
 
 

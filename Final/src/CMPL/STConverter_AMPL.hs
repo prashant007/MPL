@@ -254,6 +254,9 @@ transCOM x = case x of
                                               where
                                                  (intp,posnp) = transCInteger cint 
   
+  AC_EMSG emsg                          -> T.AC_EMSG emsg 
+
+
 transLABELCOMS x = case x of
   Labelcoms1 uident1 uident2 coms3  -> ( (
                                            transUIdent uident1,
