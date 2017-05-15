@@ -1,5 +1,6 @@
 module ToCMPL.GenAndSolveSetEqns where
 
+import TypeInfer.MPL_AST
 import qualified Data.Set as S 
 import Data.List 
 
@@ -12,18 +13,6 @@ some bound vars and the functions names used in the function body
 -}
 type SetEqn = (Name,(S.Set BVar,S.Set FVar,[Name]))
 
-{-
-All the definitons here function definitions. Only things that need to be lambda
-lifted are  the defns within the where part of let statements. These
-defintions can be mutually recursive.
--}
-
-genSetEqns :: [Defn] -> [SetEqn]
-genSetEqns defns 
-      = map genSetEqn newDefns 
-  where 
-    newDefns = evalState (freshFNames_Args defns) (0,0)
-
 
 {-
 At this point all the functions are gonna have only one line of 
@@ -31,7 +20,7 @@ pattern term.
 -}
 genSetEqn :: Defn -> SetEqn 
 genSetEqn fDefn@(FunctionDefn (Custom fn,fType,[fBody],pn))
-        = (fn,(S.fromList fVars,S.fromList bVars,funDeps)) 
+        = (fn,(S.fromList bVars,S.fromList fVars,funDeps)) 
     where
       ((fPatts,Left fTerm),_) 
              = fBody 
@@ -42,18 +31,28 @@ genSetEqn fDefn@(FunctionDefn (Custom fn,fType,[fBody],pn))
       funDeps= getFNames fTerm
 
 
+
+getBVarDefn :: Defn -> [BVar]
+getBVarDefn (FunctionDefn (Custom fn,fType,[fBody],pn))
+    = nub $ map (\(VarPattern (u,pn)) -> u) fPatts
+  where
+      ((fPatts,fTerm),_) = fBody 
+
+
+
+
 {-
 get all the free variables used inside a function defintion 
 -}
 
 getfreeVarsDefn :: Defn -> [FVar]
-getfreeVarsDefn defn@(FunctionDefn (Custom fn,fType,[fBody],pn))
-    = allVars \\ bvars 
+getfreeVarsDefn defn@(FunctionDefn (fnm,fType,[fBody],pn))
+    = (allVars \\ bvars) 
   where
       ((fPatts,Left fTerm),_) 
              = fBody 
       bvars  = getBVarDefn defn 
-      allVars= getVarsL fTerm
+      allVars= nub $ getVarsL fTerm
 
 
 getVarsL :: Term -> [FVar]
@@ -65,22 +64,19 @@ getVarsL term
         TCallFun (_,terms,_) ->
           concat $ map getVarsL terms
 
-        TLet (term,lwhrs,_) -> 
-          getVarsL term ++ getVarsL_lwhrs lwhrs  
-
         TVar    (var,_) -> 
           [var]
 
         TIf (t1,t2,t3,_) -> 
           (concat.map getVarsL) [t1,t2,t3]
 
-        TCase   (term,pattTerms,_) ->
-          getVarsL term ++ 
+        TCase   (cterm,pattTerms,_) ->
+          getVarsL cterm ++ 
           (concat.map getVarsL_PT) pattTerms 
 
-        TFold   (term,foldPatts,pn) ->
-          getVarsL term ++ 
-          (concat.map getVarsL_PT) (map (\(_,a,_,_) -> a) foldPatts)
+        TFold   (fterm,foldPatts,pn) ->
+          getVarsL fterm ++ 
+          (concat.map getVarsL) (map (\(_,_,a,_) -> a) foldPatts)
 
         TCons   (_,terms,_) ->
           (concat.map getVarsL) terms
@@ -105,18 +101,6 @@ getVarsL_PT :: PatternTermPhr -> [FVar]
 getVarsL_PT (_,Left term)
     = getVarsL term 
 
-
-getVarsL_lwhrs :: [LetWhere] -> [FVar]
-getVarsL_lwhrs lwhrs = concat $ map getVarsL_lwhr lwhrs
-
-getVarsL_lwhr :: LetWhere -> [FVar]
-getVarsL_lwhr lwhr 
-    = case lwhr of 
-        LetPatt (patt,term) -> 
-            getVarsL term 
-        LetDefn defn ->
-            getfreeVarsDefn defn 
-
 -- ========================================================================
 -- ========================================================================
 
@@ -137,9 +121,6 @@ getFNames term
            where
              tnms = (concat.map getFNames) terms
 
-        TLet (term,lwhrs,_) -> 
-          getFNames term ++ getFNames_lwhrs lwhrs  
-
         TIf (t1,t2,t3,_) -> 
           (concat.map getFNames) [t1,t2,t3]
 
@@ -149,7 +130,7 @@ getFNames term
 
         TFold   (term,foldPatts,pn) ->
           getFNames term ++ 
-          (concat.map getFNames.map (\(a,b,c,d)-> c)) terms
+          (concat.map getFNames.map (\(a,b,c,d)-> c)) foldPatts
 
         TCons   (_,terms,_) ->
           (concat.map getFNames) terms
@@ -167,22 +148,6 @@ getFNames term
 getFNames_rec :: (Pattern,Term,PosnPair) -> [Name]
 getFNames_rec (_,term,_)
     = getFNames term 
-
-getFNames_lwhrs :: [LetWhere] -> [Name]
-getFNames_lwhrs = (concat.map getFNames_lwhr)
-
-getFNames_lwhr :: LetWhere -> [Name]
-getFNames_lwhr lwhr 
-    = case lwhr of
-        LetDefn defn -> 
-            concat $ map getFNames terms  
-          where
-            FunctionDefn (_,_,pattList,_) = defn 
-            terms = map (\((p,Left t),ppn)-> t) pattList
-
-        LetPatt (_,term) -> 
-            getFNames term  
-
 
 getFNames_PT :: PatternTermPhr -> [Name]
 getFNames_PT (patts,Left term)
@@ -325,17 +290,17 @@ addExtraArgs_Defn sList (FunctionDefn (fName,fT,pattsList,pn))
                   FunctionDefn (fName,fT,[augPattList],pn)
                 where
                   augPattList
-                    = ((patts ++ map (\x -> TVar (x,pn)) fvars),newPTerm)  
+                    = (((patts ++ map (\x -> VarPattern (x,pn)) fvars),newPTerm),ppn)  
 
           otherwise  -> 
               FunctionDefn (fName,fT,[newPattList],pn)
   where
-    (patts,Left pTerm)
+    ((patts,Left pTerm),ppn)
       = head pattsList
     newPTerm   
       = Left (addExtArgs_Term sList pTerm)
     newPattList
-      = (patts,newPTerm)  
+      = ((patts,newPTerm),ppn)  
 
 
 
@@ -346,19 +311,16 @@ addExtArgs_Term sList term
             TRecord (map (\(p,t,pn) -> (p,addExtArgs_Term sList t,pn)) recList)
 
         TCallFun (fName,terms,pn) ->
-            case fname of 
+            case fName of 
               Custom fnm ->
                 case lookup fnm sList of 
                   Nothing ->
-                    term 
+                    TCallFun (fName,map (addExtArgs_Term sList) terms,pn) 
                   Just fvars -> 
                     TCallFun (fName,terms ++ map (\x -> TVar (x,pn)) fvars,pn)  
 
               otherwise -> 
-                term 
-
-        TLet (term,letWhrs,pn) -> 
-            undefined
+                TCallFun (fName,map (addExtArgs_Term sList) terms,pn)  
 
         TIf (t1,t2,t3,pn) -> 
             TIf (
@@ -378,7 +340,7 @@ addExtArgs_Term sList term
         TFold (term,foldPatts,pn) ->
             TFold (
                    addExtArgs_Term sList term,
-                   map (\(n,pt,t,p) -> (a,pt,addExtArgs_Term sList t,p)) foldPatts,pn
+                   map (\(n,pt,t,p) -> (n,pt,addExtArgs_Term sList t,p)) foldPatts,pn
                   )
             
         TCons (nm,terms,pn) ->
@@ -392,3 +354,5 @@ addExtArgs_Term sList term
 
         otherwise ->
             term
+
+

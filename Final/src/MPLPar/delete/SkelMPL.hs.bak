@@ -287,7 +287,7 @@ transLetWhere x = case x of
   PATTTERM_LetWhere pattterm -> failure x
 transPattTerm :: PattTerm -> Result
 transPattTerm x = case x of
-  JUSTPATTTERM pattern term -> failure x
+  JUSTPATTTERM pident term -> failure x
 transConstantType :: ConstantType -> Result
 transConstantType x = case x of
   INTEGER pinteger -> failure x

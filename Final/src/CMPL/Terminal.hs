@@ -14,17 +14,23 @@ import Control.Monad
 
 import CMPL.TypesAMPL
 
+{-
+  ghc-options: -O3 
+               -threaded
+               -with-rtsopts=-N3
+-}
+
 equalS = replicate 80 '='
 stars  = replicate 70 '*'
  
 communicateT sock h tchan bool1 ch (comm,val,num) = do
     hSetSGR h [(SetConsoleIntensity BoldIntensity),(SetColor Foreground Vivid Cyan),(SetColor Background Dull Blue)]
     let chn = uniform_ch_length ch 
-    hPutStrLn h (equalS  ++ "\n" ++ equalS)  
-    hPutStrLn h ((replicate 34 '=') ++ "CHANNEL " ++
-                 chn ++ (replicate 34 '='))
-
-    hPutStrLn h (equalS ++ "\n\n")
+    --hPutStrLn h (equalS  ++ "\n" ++ equalS)  
+    hPutStrLn h ("\n" ++ (replicate 34 '=') ++ "CHANNEL " ++
+                 chn ++ (replicate 34 '=') ++ "\n")
+    
+    --hPutStrLn h (equalS ++ "\n\n")
     let stars = " ****************************************" 
     hSetTitle h $ stars ++ " CHANNEL   " ++ chn  ++ stars ++ "*****************"
     hSetSGR h [(SetColor Foreground Vivid Cyan),(SetColor Background Dull Black)]
@@ -61,9 +67,7 @@ communicateTHelper h tchan ch (comm,val,n)
 communicate ::  Socket -> Bool -> CH -> (String,VAL,Int) -> IO (TChan VAL,Handle)
 communicate sock bool1 ch (comm,val,num) = do
     b <- atomically $ newTChan
-    --b <- newTChanIO 
     (h,host,po) <- accept sock
-    --threadDelay 100000
     forkIO $ communicateT sock  h b bool1 ch  (comm,val,num)
     return (b,h) 
 

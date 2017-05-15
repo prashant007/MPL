@@ -470,7 +470,7 @@ instance Print LetWhere where
   prtList _ (x:xs) = (concatD [prt 0 x, doc (showString ";"), prt 0 xs])
 instance Print PattTerm where
   prt i e = case e of
-    JUSTPATTTERM pattern term -> prPrec i 0 (concatD [prt 0 pattern, doc (showString "="), doc (showString "{"), prt 0 term, doc (showString "}")])
+    JUSTPATTTERM pident term -> prPrec i 0 (concatD [prt 0 pident, doc (showString "="), doc (showString "{"), prt 0 term, doc (showString "}")])
 
 instance Print ConstantType where
   prt i e = case e of

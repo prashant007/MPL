@@ -292,6 +292,7 @@ transConstantType :: ConstantType -> Result
 transConstantType x = case x of
   INTEGER pinteger -> failure x
   STRING tokstring -> failure x
+  CHAR char -> failure x
   DOUBLE double -> failure x
 transRecordEntryAlt :: RecordEntryAlt -> Result
 transRecordEntryAlt x = case x of

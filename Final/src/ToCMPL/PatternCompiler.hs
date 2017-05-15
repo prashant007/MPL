@@ -1,6 +1,7 @@
 module ToCMPL.PatternCompiler where
 
 import ToCMPL.PatternComp_Help
+import ToCMPL.LambdaLift
 
 import TypeInfer.MPL_AST 
 import TypeInfer.Gen_Eqns_CommFuns
@@ -46,7 +47,7 @@ pushToTop_help (stmt:rest) (iDefns,pn)
 
 pushToTop_Stmt :: Stmt -> [Defn] 
 pushToTop_Stmt (DefnStmt (defns,stmts,_))
-    = defns ++ (concat $ map pushToTop_Stmt stmts)    
+    =  (concat $ map pushToTop_Stmt stmts) ++ defns    
 
 -- ================================================================
 -- ================================================================
@@ -70,7 +71,6 @@ pattCompile mpl = cMPL
       cMPL   = evalState stVal (1,0,[],[],symTab) 
 
 
-
 pattCompile_MPL :: MPL ->
         EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable))
                 MPL 
@@ -84,28 +84,41 @@ pattCompile_Stmt :: Stmt ->
 pattCompile_Stmt stmt = do 
     case stmt of 
       DefnStmt (defns,[],pn) -> do 
-        --newStmts <- mapM pattCompile_Stmt stmts 
-        newDefns <- mapM pattCompile_Defn defns 
-        return $ DefnStmt (newDefns,[],pn)
+        newDefns <- mapM (pattCompile_Defn True) defns 
+        let finDefns = concat $ map lam_lift_sel newDefns
+        return $ DefnStmt (finDefns,[],pn)
 
       otheriwse ->
         return stmt    
 
 
-pattCompile_Defn :: Defn -> 
+setState :: Bool -> EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) ()  
+setState bool 
+    = case bool of
+          -- reset state   
+          True -> do 
+            modify $ \(n,a,b,c,d) -> (1,0,b,c,d)  
+            return () 
+          -- don't reset state 
+          False ->
+            return () 
+
+
+pattCompile_Defn :: Bool -> Defn -> 
         EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable))
                 Defn  
 
-pattCompile_Defn defn = do 
+pattCompile_Defn bool defn = do 
     (_,_,_,_,symTab) <- get 
-    modify $ \(n,a,b,c,d) -> (1,0,b,c,d)
+    setState bool 
     case defn of 
         FunctionDefn (fName,fType,pairList,pn) -> do 
             let
               pattTerms= map fst pairList 
-              numArgs  = (length.fst.head) pattTerms
+              ipattT   = map handleNoPatts pattTerms
+              numArgs  = (length.fst.head) ipattT
             newArgs <- genNewVarList numArgs
-            newPattTerm <- mapM handleEithTerm pattTerms
+            newPattTerm <- mapM handleEithTerm ipattT
             let 
               strArgs = map (\x -> "fv" ++ show x) newArgs
               varPatts= map (\x -> VarPattern (x,pn)) strArgs
@@ -122,6 +135,13 @@ pattCompile_Defn defn = do
 
         otherwise -> 
             return defn 
+
+
+handleNoPatts :: ([Pattern],Either Term [GuardedTerm]) -> ([Pattern],Either Term [GuardedTerm])
+handleNoPatts ([NoPattern _],term) 
+    = ([],term)
+handleNoPatts pair 
+    = pair
 
 
 {-
@@ -319,11 +339,9 @@ handleLet :: Term ->
             Term 
 handleLet (TLet (lterm,lwhrs,pn)) = do
     let 
-      allDefLWhrs  = filter isFunDefnLWhr lwhrs
-      allDefns     = map (\(LetDefn d) -> d) allDefLWhrs 
-      remLWhrs     = lwhrs \\ allDefLWhrs    
-    newDefns <- mapM pattCompile_Defn allDefns
+      allDefns     = map (\(LetDefn d) -> d) lwhrs 
+    newDefns <- mapM (pattCompile_Defn False) allDefns
     let 
-      newAllDefLWhrs = map (\d -> LetDefn d) newDefns 
-      finLWhrs       = remLWhrs ++ newAllDefLWhrs   
-    handleLet_help finLWhrs lterm pn 
+      fLetDefn = map (\d -> LetDefn d) newDefns
+    return $ TLet (lterm,fLetDefn,pn)
+

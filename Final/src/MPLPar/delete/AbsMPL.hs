@@ -244,7 +244,7 @@ data PattTerm = JUSTPATTTERM PIdent Term
   deriving (Eq, Ord, Show, Read)
 
 data ConstantType
-    = INTEGER PInteger | STRING TokString | DOUBLE Double
+    = INTEGER PInteger | STRING TokString | CHAR Char | DOUBLE Double
   deriving (Eq, Ord, Show, Read)
 
 data RecordEntryAlt = RECORDENTRY_ALT RecordEntry

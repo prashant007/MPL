@@ -384,7 +384,7 @@ All other symbols are terminals.
   |  |  **|**  | //PattTerm// 
   | //[LetWhere]// | -> | //LetWhere// 
   |  |  **|**  | //LetWhere// ``;`` //[LetWhere]// 
-  | //PattTerm// | -> | //Pattern// ``=`` ``{`` //Term// ``}`` 
+  | //PattTerm// | -> | //PIdent// ``=`` ``{`` //Term// ``}`` 
   | //[RecordEntry]// | -> | **eps**
   |  |  **|**  | //RecordEntry// 
   |  |  **|**  | //RecordEntry// ``;`` //[RecordEntry]// 

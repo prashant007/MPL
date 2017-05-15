@@ -17,9 +17,6 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 executable Final
-  ghc-options: -O3 
-               -threaded
-               -with-rtsopts=-N3
   main-is:             Mainfile.hs
   -- other-modules:       
   other-extensions:    CPP, MagicHash, DeriveGeneric

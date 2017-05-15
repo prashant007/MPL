@@ -240,7 +240,7 @@ data Term
 data LetWhere = DEFN_LetWhere Defn | PATTTERM_LetWhere PattTerm
   deriving (Eq, Ord, Show, Read)
 
-data PattTerm = JUSTPATTTERM Pattern Term
+data PattTerm = JUSTPATTTERM PIdent Term
   deriving (Eq, Ord, Show, Read)
 
 data ConstantType

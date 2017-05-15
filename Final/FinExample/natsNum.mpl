@@ -14,6 +14,7 @@ codata C -> InfList (A) =
              
 fun someThing =
    ns -> Head (ns)
+
           
 proc proc1 =
   ns|c => in1 -> do 

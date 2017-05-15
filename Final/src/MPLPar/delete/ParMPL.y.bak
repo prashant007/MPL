@@ -451,7 +451,7 @@ ListLetWhere :: { [LetWhere] }
 ListLetWhere : LetWhere { (:[]) $1 }
              | LetWhere ';' ListLetWhere { (:) $1 $3 }
 PattTerm :: { PattTerm }
-PattTerm : Pattern '=' '{' Term '}' { AbsMPL.JUSTPATTTERM $1 $4 }
+PattTerm : PIdent '=' '{' Term '}' { AbsMPL.JUSTPATTTERM $1 $4 }
 ListRecordEntry :: { [RecordEntry] }
 ListRecordEntry : {- empty -} { [] }
                 | RecordEntry { (:[]) $1 }

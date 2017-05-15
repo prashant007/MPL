@@ -250,110 +250,12 @@ getConsName (ConsPattern (cname,_,_))
     = cname
 
 
--- ======================================================================
--- ======================================================================
-
-subsInTerm :: (Term,Term) -> Term -> Term  
-subsInTerm subst@(oTerm,nTerm) sterm 
-    = case sterm of
-        TRecord tripList -> 
-          TRecord (substTripList subst tripList) 
-        
-        TCallFun (fName,terms,pn) ->
-          TCallFun (fName,map (subsInTerm subst) terms,pn)
-
-        TLet (term,letwhrs,pn) -> 
-          TLet (
-                subsInTerm subst term,
-                map (substLetWhr subst) letwhrs,
-                pn 
-               ) 
-
-        TVar (str,pn) -> 
-          case ostr == str of 
-            True  -> 
-              nTerm
-            False ->
-              sterm
-
-        TIf     (t1,t2,t3,pn) -> 
-          TIf (
-                subsInTerm subst t1,
-                subsInTerm subst t2,
-                subsInTerm subst t3,
-                pn
-              )
-
-        TCase   (term,pattTerms,pn) -> 
-          TCase (
-                 subsInTerm subst term,
-                 map (susbtInPattCase subst) pattTerms,
-                 pn
-                )
-
-        TFold   (term,foldPatts,pn) -> 
-          TFold (
-                  subsInTerm subst term,
-                  map (substInFoldPatt subst) foldPatts,
-                  pn
-                ) 
-
-        TUnfold (term,foldPatt,pn) -> 
-          undefined
-
-        TCons   (nm,terms,pn) -> 
-          TCons (nm, map (subsInTerm subst) terms,pn)
-
-        TDest (nm,terms,pn) -> 
-          TDest (nm,map (subsInTerm subst) terms,pn)
-
-        TProd (terms,pn) -> 
-          TProd (map (subsInTerm subst) terms,pn)
-
-        otherwise -> 
-          sterm  
-    where 
-       TVar (ostr,opn) = oTerm 
-
--- ===================================================================
--- ===================================================================
-
-susbtList :: [(Term,Term)] -> Term -> Term 
-susbtList [] finTerm 
-    = finTerm
-susbtList (s:ss) term 
-    = susbtList ss (subsInTerm s term)
-
-substTripList :: (Term,Term) -> [(Pattern,Term,PosnPair)] -> 
-                 [(Pattern,Term,PosnPair)]
-
-substTripList _ []
-    = []
-substTripList subst ((patt,term,pn):rest)
-    = ((patt,subsInTerm subst term,pn):substTripList subst rest) 
-
-
-substInFoldPatt :: (Term,Term) -> FoldPattern -> FoldPattern
-substInFoldPatt subst (nm,patts,term,pn)
-    = (nm,patts,subsInTerm subst term,pn) 
-
-
-substInFun :: (Term,Term) -> [(PatternTermPhr,PosnPair)] -> 
-              [(PatternTermPhr,PosnPair)]
-substInFun subst  
-    = map (\(pt,ppn) -> (susbtInPattCase subst pt,ppn)) 
-
-
-susbtInPattCase :: (Term,Term) -> PatternTermPhr -> PatternTermPhr
-susbtInPattCase subst (patts,Left term)
-    = (patts,Left (subsInTerm subst term))
-
 getLeft :: Either a b -> a
 getLeft (Left a) = a
 
--- ============================================================================
--- ============================================================================
 
+-- ============================================================================
+-- ============================================================================
 
 handleGuarded :: [GuardedTerm] -> Term -> 
     EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable))
@@ -383,59 +285,7 @@ genCase (t1,t2) fTerm = lcase
 
 
 
-isFunDefnLWhr :: LetWhere -> Bool 
-isFunDefnLWhr (LetDefn _) = True 
-isFunDefnLWhr _           = False 
-
-{-
-Important assumption - All the variable assignments should occur before 
-the defintions
--}
-handleLet_help :: [LetWhere] -> Term -> PosnPair ->
-    EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable))
-        Term 
-
-handleLet_help [] letTerm _
-    = return letTerm  
-
-handleLet_help ret@(lwhr:rest) letTerm pn 
-    = case lwhr of 
-          -- here onwards every LetWhere will be a defn 
-          LetDefn d -> do 
-            let 
-              finLTerm = TLet (letTerm,ret,pn)
-            return finLTerm 
-
-          LetPatt (patt,letTerm) -> do 
-            let 
-              VarPattern pair
-                      = patt 
-              subst   = (TVar pair,letTerm)
-              -- substitute in the let term 
-              newLTerm = subsInTerm subst letTerm   
-              -- substitute in the other where clause underneath the 
-              -- current one 
-              newRest = map (substLetWhr subst) rest
-            handleLet_help newRest newLTerm pn 
 
 
-
-substLetWhr :: (Term,Term) -> LetWhere -> LetWhere
-
-substLetWhr subst lwhr 
-    = case lwhr of 
-          LetDefn defn ->
-            LetDefn (substInDefn subst defn)  
-          LetPatt (patt,term) -> 
-            LetPatt (patt,subsInTerm subst term)
-
-
-substInDefn :: (Term,Term) -> Defn -> Defn 
-substInDefn subst defn 
-    = case defn of 
-        FunctionDefn (fnm,fType,fbody,pn) ->
-          FunctionDefn (fnm,fType,substInFun subst fbody,pn)
-
-        otherwise -> defn 
 
 

@@ -476,6 +476,7 @@ instance Print ConstantType where
   prt i e = case e of
     INTEGER pinteger -> prPrec i 0 (concatD [prt 0 pinteger])
     STRING tokstring -> prPrec i 0 (concatD [prt 0 tokstring])
+    CHAR c -> prPrec i 0 (concatD [prt 0 c])
     DOUBLE d -> prPrec i 0 (concatD [prt 0 d])
 
 instance Print RecordEntryAlt where

@@ -666,3 +666,120 @@ putStrLnRed :: String -> IO ()
 putStrLnRed str = do 
   setSGR [SetColor Foreground Vivid Red]
   putStrLn str 
+
+-- ======================================================================================
+-- ======================================================================================
+
+
+subsInTerm :: (Term,Term) -> Term -> Term  
+subsInTerm subst@(oTerm,nTerm) sterm 
+    = case sterm of
+        TRecord tripList -> 
+          TRecord (substTripList subst tripList) 
+        
+        TCallFun (fName,terms,pn) ->
+          TCallFun (fName,map (subsInTerm subst) terms,pn)
+
+        TLet (term,letwhrs,pn) -> 
+          TLet (
+                subsInTerm subst term,
+                map (substLetWhr subst) letwhrs,
+                pn 
+               ) 
+
+        TVar (str,pn) -> 
+          case ostr == str of 
+            True  -> 
+              --error $ "hey this is " ++ show subst 
+              nTerm
+            False ->
+              sterm
+
+        TIf     (t1,t2,t3,pn) -> 
+          TIf (
+                subsInTerm subst t1,
+                subsInTerm subst t2,
+                subsInTerm subst t3,
+                pn
+              )
+
+        TCase   (term,pattTerms,pn) -> 
+          TCase (
+                 subsInTerm subst term,
+                 map (susbtInPattCase subst) pattTerms,
+                 pn
+                )
+
+        TFold   (term,foldPatts,pn) -> 
+          TFold (
+                  subsInTerm subst term,
+                  map (substInFoldPatt subst) foldPatts,
+                  pn
+                ) 
+
+        TUnfold (term,foldPatt,pn) -> 
+          undefined
+
+        TCons   (nm,terms,pn) -> 
+          TCons (nm, map (subsInTerm subst) terms,pn)
+
+        TDest (nm,terms,pn) -> 
+          TDest (nm,map (subsInTerm subst) terms,pn)
+
+        TProd (terms,pn) -> 
+          TProd (map (subsInTerm subst) terms,pn)
+
+        otherwise -> 
+          sterm  
+    where 
+       TVar (ostr,opn) = oTerm 
+
+-- ===================================================================
+-- ===================================================================
+
+substTripList :: (Term,Term) -> [(Pattern,Term,PosnPair)] -> 
+                 [(Pattern,Term,PosnPair)]
+
+substTripList _ []
+    = []
+substTripList subst ((patt,term,pn):rest)
+    = ((patt,subsInTerm subst term,pn):substTripList subst rest) 
+
+
+substInFoldPatt :: (Term,Term) -> FoldPattern -> FoldPattern
+substInFoldPatt subst (nm,patts,term,pn)
+    = (nm,patts,subsInTerm subst term,pn) 
+
+
+substInFun :: (Term,Term) -> [(PatternTermPhr,PosnPair)] -> 
+              [(PatternTermPhr,PosnPair)]
+substInFun subst  
+    = map (\(pt,ppn) -> (susbtInPattCase subst pt,ppn)) 
+
+
+susbtInPattCase :: (Term,Term) -> PatternTermPhr -> PatternTermPhr
+susbtInPattCase subst (patts,Left term)
+    = (patts,Left (subsInTerm subst term))
+
+-- ========================================================================
+-- ========================================================================
+
+
+substLetWhr :: (Term,Term) -> LetWhere -> LetWhere
+
+substLetWhr subst (LetPatt (patt,term)) 
+    = LetPatt (patt,subsInTerm subst term)
+substLetWhr subst letDefn 
+    = substInDefn subst letDefn   
+
+
+substInDefn :: (Term,Term) -> LetWhere -> LetWhere 
+substInDefn subst oDef@(LetDefn defn) 
+    = case defn of 
+        FunctionDefn (fnm,fType,fbody,pn) ->
+            LetDefn newDefn
+          where 
+            newDefn = FunctionDefn (fnm,fType,substInFun subst fbody,pn)
+
+        otherwise -> 
+            oDef 

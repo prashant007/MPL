@@ -312,6 +312,7 @@ separator Term "," ;
 
 INTEGER.ConstantType ::= PInteger ;
 STRING .ConstantType ::= TokString ;
+CHAR   .ConstantType ::= Char ;
 DOUBLE .ConstantType ::= Double ;
 
 RECORDENTRY_ALT.RecordEntryAlt ::= RecordEntry;

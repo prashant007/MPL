@@ -373,7 +373,6 @@ find_service (names,(n,Q_EMPTY,Q_HPUT 3 q):chs)
       return ([],(names,(n,Q_CLOSE,q):chs))
 -------------------------------------------------------------------------------------
 find_service (names,(n,Q_HPUT 1 (Q_GET (s,t,e,c)),Q_EMPTY):chs)  = do
-    --liftIO $ threadDelay 10000
     liftIO $ hSetSGR stdout  [(SetConsoleIntensity BoldIntensity),(SetColor Foreground Vivid Blue)]
     mvar' <- get 
     let mapping = M.lookup n mvar'
@@ -404,14 +403,13 @@ find_service (names,(n,Q_HPUT 1 (Q_GET (s,t,e,c)),Q_EMPTY):chs)  = do
                      val <- liftIO $ atomically $  readTChan tchan'  
                      return ([(val:s,t,e,c)],(names,(n,Q_EMPTY,Q_EMPTY):chs))
                   else do        
-                     val <- liftIO $ atomically $  readTChan tchan'  
+                     val <- liftIO $ atomically $  readTChan tchan' 
                      return ([(val:s,t,e,c)],(names,(n,Q_EMPTY,Q_EMPTY):chs))
         Nothing            -> error "No mapping for channel found!!!" 
 
 ---------------------------------------------------------------------------------
 find_service (names,(n,Q_HPUT 2 (Q_PUT m  q),Q_EMPTY):chs)   = do 
     mvar' <- get 
-    --liftIO $ threadDelay 10000
     let mapping = M.lookup n mvar'
         mapping' = M.toList $ mvar' 
     case mapping of
@@ -434,8 +432,10 @@ find_service (names,(n,Q_HPUT 2 (Q_PUT m  q),Q_EMPTY):chs)   = do
               case m of
                   V_INT n' -> do
                          liftIO $ hPutStrLn handle $  show  n'  
+
                   V_CHAR c -> do
-                         liftIO $ hPutChar handle c  
+                         liftIO $ hPutChar handle c
+  
               return ([],(names ,(n,q,Q_EMPTY):chs))
 
       Nothing            -> error "No mapping for channel found!!!" 

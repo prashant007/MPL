@@ -1507,8 +1507,8 @@ transTerm x = case x of
               return $ M.TCons ("Cons",[tTerm,tRest],tPosn)
          
   LETTERM toklet term lwheres -> do 
-      tTerm    <- transTerm term
       tletwhrs <- mapM transLetWhere lwheres 
+      tTerm    <- transTerm term
       return $ M.TLet (tTerm,tletwhrs,transTokLet toklet)
 
   VARTERM pident -> do 
@@ -1683,6 +1683,9 @@ transConstantType x = case x of
 
   DOUBLE double -> 
         (M.ConstDouble double,(0,0))
+
+  CHAR char ->
+        (M.ConstChar char,(0,0))
 
 transRecordEntryAlt :: RecordEntryAlt -> 
                        State [(String,[M.Name])] 
