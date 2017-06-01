@@ -31,7 +31,7 @@ genEquations_Proc []
         = return []
 
 genEquations_Proc (p:[]) = do 
-        modify $ \(n,tt,c,chc,sym) -> (n,tt,c,chc,sym)
+        --modify $ \(n,tt,c,chc,sym) -> (n,tt,c,chc,sym)
         (newP,flag) <- genEquations_PComm p
         case flag == 0 of 
             True  -> 
@@ -40,7 +40,7 @@ genEquations_Proc (p:[]) = do
                 return newP  
 
 genEquations_Proc (p:ps) = do 
-        modify $ \(n,tt,c,chc,sym) -> (n,tt,c,chc,sym)
+        --modify $ \(n,tt,c,chc,sym) -> (n,tt,c,chc,sym)
         (newP,flag)  <- genEquations_PComm p
         case flag == 0 of
             True  -> do 

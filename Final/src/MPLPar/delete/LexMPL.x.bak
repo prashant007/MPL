@@ -77,7 +77,7 @@ $d + { tok (\p s -> PT p (eitherResIdent (T_PInteger . share) s)) }
 
 $l $i*   { tok (\p s -> PT p (eitherResIdent (TV . share) s)) }
 
-
+\' ($u # [\' \\] | \\ [\\ \' n t]) \'  { tok (\p s -> PT p (TC $ share s))  }
 
 $d+ \. $d+ (e (\-)? $d+)? { tok (\p s -> PT p (TD $ share s)) }
 

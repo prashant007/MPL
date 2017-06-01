@@ -36,7 +36,6 @@ position token TokHPut   {"hput"} ;
 position token TokSplit  {"split"} ;
 position token TokFork   {"fork"} ;
 position token TokDCare  {"_"};
-position token TokString '"' letter (letter | digit | '_' | '\'')* '"' ;
 position token UIdent (upper (letter | digit | '_')*);
 position token PIdent letter (letter | digit | '_' | '\'')* ;
 --position token InfixRem ( '|' |'&'|'='|'<'|'>'|'+'|'*'|'/'|
@@ -245,7 +244,7 @@ CONSPATTERN_WA. Pattern1 ::= UIdent ;
 LISTPATTERN1  . Pattern1 ::= TokSBrO [Pattern] TokSBrC ;
 PRODPATTERN   . Pattern1 ::= "<" [Pattern] ">" ;
 VARPATTERN    . Pattern1 ::= PIdent ;
-STR_CONSTPATTERN. Pattern1 ::= TokString ;
+STR_CONSTPATTERN. Pattern1 ::= String ;
 INT_CONSTPATTERN.Pattern1  ::= PInteger ;
 NULLPATTERN     . Pattern1 ::= TokDCare ;
 _               .Pattern1  ::= "(" Pattern ")" ;  
@@ -311,7 +310,7 @@ separator RecordEntryAlt "," ;
 separator Term "," ;
 
 INTEGER.ConstantType ::= PInteger ;
-STRING .ConstantType ::= TokString ;
+STRING .ConstantType ::= String ;
 CHAR   .ConstantType ::= Char ;
 DOUBLE .ConstantType ::= Double ;
 

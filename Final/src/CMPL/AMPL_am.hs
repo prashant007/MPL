@@ -3,19 +3,18 @@ import  CMPL.TypesAMPL
 import  CMPL.Terminal
 
 import System.Process 
-import Control.Concurrent.STM.TChan
-import Control.Monad.STM
 import Control.Concurrent
 
 import Control.Monad.IO.Class
 import System.Console.ANSI
-import Network
+import Network as N 
+import Network.Socket
 import System.IO
 
 import Control.Monad.Trans.State.Lazy
 import Control.Monad.Identity
 
-import qualified Data.Map as M 
+import qualified Data.Map as M
 ----------------------------------------------------------------------
 ----------------------------------------------------------------------
 --
@@ -205,30 +204,24 @@ get_neg_channel_list chlist = filter (\x -> x < 0 ) $ map (\(a,b) -> a) $ chlist
 -- get a map of negative channel numbers with port numbers
 channelMap :: [CH] -> IO (CH_MAP)
 channelMap chlist = do
-         let chPortList =((map (\(x,y) ->(x,PortNumber y,False) ) ).(zip chlist).(take len)) [44440 .. ]
-             len = length chlist 
-         chmap <- get_ch_prop chPortList []
+         let 
+           chPortList =((map (\(x,y) ->(x,PortNumber y))).(zip chlist).(take len)) [44460 .. ]
+           len = length chlist 
+         chmap <- get_ch_prop chPortList
          return $ M.fromList chmap  
           
        
            
 --associate with each channel a triple of port,socket,handle 
 
---get_ch_prop :: [(CH, PortID)]-> [(CH, CHPROPERTY)]-> IO [(CH, CHPROPERTY)]
-get_ch_prop [] _ = return []
-get_ch_prop ((ch,port,boolArg):rem) intmdt_list 
-      | rem /= []  = do
-                socket <- listenOn port
-                emtchan <- atomically $ newTChan
-                let pair =(ch,(port,socket,stdout,boolArg,emtchan))
-                    intmdt_list' = pair : intmdt_list
-                get_ch_prop rem intmdt_list'
-      | otherwise = do
-              socket  <- listenOn port
-              emtchan <- atomically $ newTChan
-              let pair =(ch,(port,socket,stdout,boolArg,emtchan))
-                  intmdt_list' = pair : intmdt_list
-              return (intmdt_list')
+get_ch_prop :: [(CH,PortID)]->  IO [(CH, CHPROPERTY)]
+get_ch_prop []  = return []
+get_ch_prop ((ch,port):rem)  = do 
+    socket  <- listenOn port
+    let 
+      pair = (ch,(port,socket,Nothing))
+    remPair <- get_ch_prop rem
+    return (pair:remPair)
 
 ----------------------------------------------------------------------------------
 
@@ -290,6 +283,8 @@ find_interact (names,(ch, Q_FORK (t,e,((nam1,names1,c1),(nam2,names2,c2))), Q_SP
       names' = remove_gtrans ch names
 -----------------------------------------------------------------------------
 find_interact (names, (ch,Q_CLOSE,Q_HALT):chs)  = return ([],(remove_gtrans ch names,chs))
+find_interact (names, (ch,Q_HALT ,Q_HALT):chs)  = return ([],(remove_gtrans ch names,chs))
+find_interact (names, (ch,Q_CLOSE,Q_CLOSE):chs)  = return ([],(remove_gtrans ch names,chs))
 find_interact (names, (ch,Q_HALT,Q_CLOSE):chs)  = return ([],(remove_gtrans ch names,chs))
 find_interact (names,(xch@(ch,_,_)):chs) 
    | ch <= 0  = do     
@@ -374,85 +369,109 @@ find_service (names,(n,Q_EMPTY,Q_HPUT 3 q):chs)
 -------------------------------------------------------------------------------------
 find_service (names,(n,Q_HPUT 1 (Q_GET (s,t,e,c)),Q_EMPTY):chs)  = do
     liftIO $ hSetSGR stdout  [(SetConsoleIntensity BoldIntensity),(SetColor Foreground Vivid Blue)]
-    mvar' <- get 
-    let mapping = M.lookup n mvar'
-        mapping' = M.toList $ mvar' 
+    mvar <- get 
+    let mapping = M.lookup n mvar
     case mapping of
-        Just (port,socket,handle,boolArg,tchan') -> do 
-           case boolArg of --channel has never been used before 
-             False -> do
-                liftIO $ putStrLn $ "***************** Opening Channel ("++(show n)++") in a new terminal*******"
-                let comm1 = "x-terminal-emulator -e "
-                    PortNumber port' = port 
-                    comm3 =  "nc  localhost " ++ show port'
-                    comm4 = "\"bash -c ' " ++ comm3 ++ " ' \""
-                    comm = comm1 ++ comm4
-                liftIO $ runCommand  comm
-                (tchan,handle') <- liftIO $ communicate socket boolArg n ("get",V_INT 0,n)
-                tchan'' <- liftIO $ atomically $ cloneTChan tchan
-                val <- liftIO $ atomically $  readTChan tchan''
-                let mod_mvar = M.fromList (map (\(n,(p,s,h,b,t)) -> boolFun (n,(p,s,b,h,t)) port tchan'' handle' ) mapping')
-                put mod_mvar
-                return ([(val:s,t,e,c)],(names,(n,Q_EMPTY,Q_EMPTY):chs))
-                    
-             True -> do
-                liftIO $ putStrLn $ "Enter a value on already opened" ++ (show n)
-                if (-99 < n && n <= 0 ) 
-                  then do 
-                     liftIO $ hPutStr handle "> "
-                     val <- liftIO $ atomically $  readTChan tchan'  
-                     return ([(val:s,t,e,c)],(names,(n,Q_EMPTY,Q_EMPTY):chs))
-                  else do        
-                     val <- liftIO $ atomically $  readTChan tchan' 
-                     return ([(val:s,t,e,c)],(names,(n,Q_EMPTY,Q_EMPTY):chs))
-        Nothing            -> error "No mapping for channel found!!!" 
+      Nothing ->
+        error "No mapping for channel found!!!" 
+
+      Just (port,sock,mayVal) -> do 
+        case mayVal of --channel has never been used before 
+          Nothing -> do 
+            let 
+              comm1   = "x-terminal-emulator -e "
+              PortNumber port' 
+                      = port 
+              comm3   =  "nc  localhost " ++ show port'
+              comm4   = "\"bash -c ' " ++ comm3 ++ " ' \""
+              comm    = comm1 ++ comm4
+
+            liftIO $ putStrLn $ "***************** Opening Channel ("++(show n)++
+                                ") in a new terminal*******"
+            liftIO $ runCommand  comm
+
+            (handle, shost, sport) <- liftIO $ N.accept sock 
+
+            let
+              newMap  = (port,sock,Just handle)
+              delmvar = M.delete n mvar
+              newMVar = M.insert n newMap delmvar
+              
+            put newMVar
+            liftIO $ printOnHandle handle n 
+            val <- handle_GET n handle
+            return ([(val:s,t,e,c)],(names,(n,Q_EMPTY,Q_EMPTY):chs))
+                  
+          Just handle -> do
+            liftIO $ putStrLn $ "Enter a value on already opened" ++ (show n)
+            val <- handle_GET n handle
+            return ([(val:s,t,e,c)],(names,(n,Q_EMPTY,Q_EMPTY):chs))        
+
+      
 
 ---------------------------------------------------------------------------------
 find_service (names,(n,Q_HPUT 2 (Q_PUT m  q),Q_EMPTY):chs)   = do 
-    mvar' <- get 
-    let mapping = M.lookup n mvar'
-        mapping' = M.toList $ mvar' 
+    liftIO $ hSetSGR stdout  [(SetConsoleIntensity BoldIntensity),(SetColor Foreground Vivid Blue)]
+    mvar <- get 
+    let mapping = M.lookup n mvar
     case mapping of
-      Just (port,socket,handle,boolArg,tchan') -> do 
-         case boolArg of --channel has never been used before 
-           False -> do
-              liftIO $ putStrLn $ "***************** Opening Channel ("++(show n)++") in a new terminal*******"
-              let comm1 = "x-terminal-emulator -e "
-                  PortNumber port' = port 
-                  comm3 =  "nc  localhost " ++ show port'
-                  comm4 = "\"bash -c ' " ++ comm3 ++ " ' \""
-                  comm = comm1 ++ comm4
-              liftIO $ runCommand  comm
-              (tchan,handle') <- liftIO $ communicate socket boolArg n ("put",m,n)
-              tchan'' <- liftIO $ atomically $ cloneTChan tchan
-              let mod_mvar = M.fromList (map (\(n,(p,s,h,b,t)) -> boolFun (n,(p,s,b,h,t)) port tchan'' handle' ) mapping')
-              put mod_mvar
-              return ([],(names ,(n,q,Q_EMPTY):chs))
-           True -> do
-              case m of
-                  V_INT n' -> do
-                         liftIO $ hPutStrLn handle $  show  n'  
+      Nothing ->
+        error "No mapping for channel found!!!"  
 
-                  V_CHAR c -> do
-                         liftIO $ hPutChar handle c
-  
-              return ([],(names ,(n,q,Q_EMPTY):chs))
+      Just (port,socket,mayVal) -> do 
+        case mayVal of --channel has never been used before 
+          Nothing -> do
+                         
+            let 
+              comm1  = "x-terminal-emulator -e "
+              PortNumber port' 
+                     = port 
+              comm3  =  "nc  localhost " ++ show port'
+              comm4  = "\"bash -c ' " ++ comm3 ++ " ' \""
+              comm   = comm1 ++ comm4
 
-      Nothing            -> error "No mapping for channel found!!!" 
 
-                    
+            liftIO $ putStrLn $ "***************** Opening Channel ("++(show n)
+                                ++ ") in a new terminal*******"                
+
+            liftIO $ runCommand  comm
+            (handle, shost, sport) <- liftIO $ N.accept socket 
+
+            let
+              newMap = (port,socket,Just handle)
+              delmvar= M.delete n mvar
+              newMVar= M.insert n newMap delmvar
+
+            put newMVar
+            liftIO $ printOnHandle handle n
+            handle_PUT n m handle
+
+          Just handle -> do
+            handle_PUT n m handle
+        return ([],(names ,(n,q,Q_EMPTY):chs))
+                 
 -------------------------------------------------------------------------------------
 find_service (names,(n,Q_HPUT 3 q, Q_EMPTY):chs)  = do
     liftIO $ putStrLn ("Closing Channel "++(show n))
     liftIO $ putStrLn "*******************************************************"
-    mvar' <- get 
-    let mapping  = M.lookup n mvar'
+    mvar <- get 
+    let 
+      mapping  = M.lookup n mvar
+      delmvar  = M.delete n mvar
     case mapping of 
-         Just (port,socket,handle,boolArg,tchan) -> do
-           liftIO $ sClose socket
-           liftIO $ threadDelay 100000
+         Just (port,socket,mayHand) -> do
+           case mayHand of 
+              Just handle -> do 
+                 liftIO $ threadDelay 100000
+                 liftIO $ hClose handle
+                 put delmvar
+                 return ([],(names,(n,q,Q_HALT):chs))
+
+              Nothing -> 
+                 return ([],(names,(n,q,Q_HALT):chs))
+           
          Nothing -> error "Error closing channel"                                     
-    return ([],(names,(n,q,Q_HALT):chs))
+   
 
 -------------------------------------------------------------------------------------                            
 
@@ -460,11 +479,11 @@ find_service (names,xch:chs)  = do
                     (p,(names',chs')) <- find_interact (names,chs) 
                     return (p,(names',xch:chs'))
 
-boolFun (ch,(p,s,b,h,t)) port tchan'' handle 
-       | p == port = (ch,(p,s,handle,True,tchan''))
-       | otherwise = (ch,(p,s,h,b,t))
                            
 ---------------------------------------------------------------------------------
+
+
+
 -- Concurrent machine ..
 ---------------------------------------------------------------------------------
 ----------------------------------------------------------------------------
@@ -479,6 +498,7 @@ plug_ch (names,chs) = (ch',(names',chs'))
      where
          (ch',names') = newname names
          chs' = add_channel (ch',Q_EMPTY,Q_EMPTY) chs 
+
 ----------------------------------------------------------------------------
 
 process_step:: PROCESS -> StateT (CHM,DEFNS) Identity MACH'
@@ -589,9 +609,11 @@ type SEQAMPL = (AMPLCOMS,ENV,STACK)
 seq_step:: SEQAMPL -> StateT DEFNS Identity SEQAMPL
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-seq_step ((AMC_LOAD n ):c,e,s) = return (c,e,x:s)
+seq_step trip@((AMC_LOAD n ):c,e,s) = return (c,e,x:s)
                          where
-                          x = case get_from_list "Access!!" e (n-1) of
+                          s1 = show ((AMC_LOAD n):c) ++ "\n"++
+                               show e ++ "\n" ++ show s  
+                          x = case get_from_list ("Access!!\n" ++ s1) e (n-1) of
                                      V_CLO(c,e) ->  error $  "Closure < " ++ (show (V_CLO(c,e))) ++ " > taken from  environment!!"
                                      y -> y
 ------------------------------------------------------------------------------
@@ -654,7 +676,7 @@ seq_step ((AMC_INT k):c,e,s)       = return (c,e,(V_INT k): s)
 ------------------------------------------------------------------------------
 seq_step ((AMC_CHAR chr):c,e,s)    = return (c,e,(V_CHAR chr): s)
 ------------------------------------------------------------------------------
-seq_step ((AMC_STRING str):c,e,s)  = return (c,e,V_STRING str : s)
+seq_step ((AMC_STRING str):c,e,s)  = return (c,e,(unstring_Help list): s)
 ------------------------------------------------------------------------------
 seq_step ((AMC_CONCAT):c,e,V_STRING str1:V_STRING str2:s) = return (c,e,V_STRING (str2 ++ str1): s)
 ------------------------------------------------------------------------------
@@ -666,9 +688,29 @@ seq_step ((AMC_CONCATf n):c,e,s)  = return (c,e,V_STRING str' :s')
                  remove_string_cons (V_STRING str) = str 
 ------------------------------------------------------------------------------
 seq_step (AMC_UNSTRING:c,e,(V_STRING list):s)  =
-                      case list of
-                          char:str ->  return (c,e,V_CONS(2,(V_CHAR char):(V_STRING str):[]):s)
-                          []       ->  return (c,e,V_CONS(1,[]):s)
+                      return (c,e,(unstring_Help list):s)
+-----------------------------------------------------------------------------
+seq_step (AMC_APPEND:c,e,list1:list2:s)  =
+                      return (c,e,(append_Help list1 list2):s)
+------------------------------------------------------------------------------
+seq_step (AMC_TOSTR:c,e,val:s)  =
+          case val of 
+            V_CHAR char ->
+              return ((AMC_STRING [char]):c,e,s)  
+            V_INT  int  ->    
+              return ((AMC_STRING (show int)):c,e,s)
+-----------------------------------------------------------------------------
+seq_step (AMC_TOINT:c,e,val:s)  =
+          case val of 
+            V_CHAR char ->
+              case elem char "1234567890" of 
+                True -> 
+                   return (c,e,(V_INT (read [char]::Int)):s)  
+                False ->
+                   error $ stars ++ "Can't convert <<" ++ char:[] 
+                           ++ ">> to integer" ++ stars
+            V_CONS _  ->    
+              return (c,e,(string_help val):s)
 -----------------------------------------------------------------------------
 seq_step (AMC_DIVQ:c,e,V_INT n:V_INT m:s)  = return (c,e,V_INT (quot m n):s)
 ------------------------------------------------------------------------------
@@ -706,6 +748,46 @@ seq_step (AMC_LEQS:c,e,V_STRING str1:V_STRING str2:s)
                        | otherwise    = return (c,e,V_CONS(1,[]):s)
 ------------------------------------------------------------------------------
 seq_step ms  = return ms --error ("no sequential step from"++(show ms))
+
+
+unstring_Help :: String -> VAL 
+unstring_Help []
+  = V_CONS(1,[])
+unstring_Help (x:xs) 
+  = V_CONS(2,(V_CHAR x):[unstring_Help xs])
+ 
+check_str_validity :: String -> Int 
+check_str_validity list 
+    = case boolCond of 
+        True  -> (read list::Int)
+        False -> error $ equals ++ "Can't convert <<"  ++ show list ++
+                         ">> to integer" ++ equals  
+  where
+    boolCond   = (and.map (\x -> elem x validElems)) list 
+    validElems = ['0'..'9']
+  
+
+string_help :: VAL -> VAL 
+string_help val 
+    = stringify val ""
+        where
+          stringify :: VAL -> String -> VAL 
+          stringify (V_CONS (1,[])) str
+             = V_INT (check_str_validity (reverse str)) 
+          stringify (V_CONS (2,(V_CHAR x):ivals)) str 
+             = stringify (head ivals) (x:str)
+
+
+append_Help :: VAL -> VAL -> VAL 
+append_Help (V_STRING str1) (V_STRING str2)
+    = V_STRING (str1 ++ str2)
+append_Help list1 list2
+    = case list1 of 
+        V_CONS (1,[]) -> 
+          list2
+        V_CONS (2,e:v:[]) -> 
+          V_CONS (2,e:(append_Help v list2):[])
+
 
 
 

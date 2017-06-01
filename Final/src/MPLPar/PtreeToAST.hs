@@ -152,9 +152,6 @@ transInfixRem x = case x of
   InfixRem string -> string
 -}
 
-transTokString :: TokString -> (M.PosnPair,String)
-transTokString x = case x of 
-  TokString (posn,name) -> (posn,(tail.init)name)
 
 transPInteger :: PInteger -> (M.PosnPair,Int)
 transPInteger x = case x of 
@@ -194,7 +191,7 @@ transInfix2op x = case x of
 
 transInfix3op :: Infix3op -> M.FuncName
 transInfix3op x = case x of
-  Infix3op string -> detectFun "concat"
+  Infix3op string -> detectFun "append"
 
 transInfix4op :: Infix4op -> M.FuncName
 transInfix4op x = case x of
@@ -823,7 +820,7 @@ fromStrToType (posn,str)
         | str == "Int"    = M.TypeConst (M.BaseInt,posn)
         | str == "Double" = M.TypeConst (M.BaseDouble,posn)
         | str == "Char"   = M.TypeConst (M.BaseChar,posn)
-        | str == "String" = M.TypeConst (M.BaseString,posn)
+        | str == "String" = M.TypeDataType ("List", [M.TypeConst (M.BaseChar,posn)],posn)
         | otherwise       = M.TypeVar (str,posn)
        
 
@@ -1374,10 +1371,8 @@ transPattern x = case x of
       where
         (tPosn,tName) = transPIdent pident  
 
-  STR_CONSTPATTERN tokstr ->
-         return $ M.StrConstPattern (tName,tPosn)
-      where
-        (tPosn,tName) = transTokString tokstr  
+  STR_CONSTPATTERN str ->
+         return $ M.StrConstPattern (str,(0,0))
 
   INT_CONSTPATTERN pinteger -> 
          return $ M.IntConstPattern (num,tPosn)
@@ -1656,10 +1651,11 @@ detectFun name
         | name == "geqI"  = M.BuiltIn (M.Geq_I)
         | name == "eqC"   = M.BuiltIn (M.Eq_C)
         | name == "eqS"   = M.BuiltIn (M.Eq_S)
-        | name == "concat"= M.BuiltIn (M.Concat_S)
+        | name == "concat" = M.BuiltIn (M.Concat_S)
+        | name == "appendL"= M.BuiltIn (M.Append)
         | name == "unstring"   = M.BuiltIn (M.Unstring_S)
-        | name == "headString" = M.BuiltIn (M.HeadString_S)
-        | name == "tailString" = M.BuiltIn (M.TailString_S)
+        | name == "toStr" = M.BuiltIn (M.ToStr)
+        | name == "toInt" = M.BuiltIn (M.ToInt)
         | name == "orB"         = M.BuiltIn (M.Or_B)
         | name == "andB"        = M.BuiltIn (M.And_B)
         | otherwise            = M.Custom name
@@ -1676,10 +1672,8 @@ transConstantType x = case x of
       where
        (posn,num) = transPInteger pinteger
 
-  STRING tokString -> 
-        (M.ConstString str,posn) 
-      where
-        (posn,str) = transTokString tokString
+  STRING string -> 
+        (M.ConstString string,(0,0)) 
 
   DOUBLE double -> 
         (M.ConstDouble double,(0,0))

@@ -332,7 +332,7 @@ check_structors_wellformed (((s1posn,s2posn),args_posns,coms):rest) tot_list = d
                         tot_list' = filter (\(n,i) -> n /= s2) tot_list 
                     modify $ \(sy,st,tr,gi) -> (sym,args++st,tr,gi)
                     amplcoms   <- compile_common coms 
-                    modify $ \(sy,st,tr,gi) -> (sym,stack,tr,gi)
+                    modify $ \(sy,st,tr,gi) -> (sym,stack,trans,gi)
                     amplcomms  <- check_structors_wellformed rest tot_list'
                     case fst ginf of
                         "proc"  ->
@@ -424,9 +424,9 @@ compile_process pcoms@(cf:rest) = do
                    return $ (AMC_HCASE cn comlist):rest'
 
                 AC_PLUGf _ ch_pn_list (chns_posns_1,cs1) (chns_posns_2,cs2) -> do
-                    modify (\(sym,stack,trans,ginf) -> (sym,stack,trans1,ginf)) 
+                    modify (\(sym,st,trans,ginf) -> (sym,stack,trans1,ginf)) 
                     rest1' <- compile_process cs1
-                    modify $ \(sym,stack,trans,ginf) -> (sym,stack,trans2,ginf)
+                    modify $ \(sym,st,trans,ginf) -> (sym,stack,trans2,ginf)
                     rest2' <- compile_process cs2
                     return $ (AMC_PLUG ch_list (chs1,rest1') (chs2,rest2')):[] 
                  where

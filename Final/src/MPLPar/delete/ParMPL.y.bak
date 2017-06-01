@@ -134,6 +134,7 @@ import ErrM
   '|=|' { PT _ (TS _ 33) }
   '}' { PT _ (TS _ 34) }
 
+L_charac { PT _ (TC $$) }
 L_doubl  { PT _ (TD $$) }
 L_TokUnit { PT _ (T_TokUnit _) }
 L_TokSBrO { PT _ (T_TokSBrO _) }
@@ -184,6 +185,7 @@ L_Infix7op { PT _ (T_Infix7op $$) }
 
 %%
 
+Char    :: { Char }    : L_charac { (read ( $1)) :: Char }
 Double  :: { Double }  : L_doubl  { (read ( $1)) :: Double }
 TokUnit    :: { TokUnit} : L_TokUnit { TokUnit (mkPosToken $1)}
 TokSBrO    :: { TokSBrO} : L_TokSBrO { TokSBrO (mkPosToken $1)}
@@ -467,6 +469,7 @@ ListTerm : {- empty -} { [] }
 ConstantType :: { ConstantType }
 ConstantType : PInteger { AbsMPL.INTEGER $1 }
              | TokString { AbsMPL.STRING $1 }
+             | Char { AbsMPL.CHAR $1 }
              | Double { AbsMPL.DOUBLE $1 }
 RecordEntryAlt :: { RecordEntryAlt }
 RecordEntryAlt : RecordEntry { AbsMPL.RECORDENTRY_ALT $1 }

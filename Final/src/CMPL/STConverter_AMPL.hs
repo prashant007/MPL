@@ -177,7 +177,16 @@ transCOM x = case x of
   AC_STRING (ConstString (posn,_)) ustr -> T.AC_STRING posn  (ustr,(0,0)) --(transCString ustr)  -- string functions start
   AC_UNSTRING (Unstring (posn,_))       -> T.AC_UNSTRING posn 
   AC_EQS    (Eqs(posn,_))               -> T.AC_EQS posn 
-  AC_LEQS   (Leqs(posn,_))              -> T.AC_LEQS posn 
+  AC_LEQS   (Leqs(posn,_))              -> T.AC_LEQS posn
+
+  AC_TOINT    (ToInt(posn,_))           -> T.AC_TOINT posn 
+  AC_TOSTR    (ToStr(posn,_))           -> T.AC_TOSTR posn  
+
+  AC_AND    (And(posn,_))              -> T.AC_AND posn 
+  AC_OR     (Or (posn,_))              -> T.AC_OR posn  
+
+  AC_APPEND (Append(posn,_))            -> T.AC_APPEND posn  
+
   AC_CONCAT (ConcatS(posn,_)) n         -> T.AC_CONCAT posn (fromInteger n)  
   AC_LEQ    (LeqI(posn,_))              -> T.AC_LEQ posn 
   AC_EQ     (EqI (posn,_))              -> T.AC_EQ posn 

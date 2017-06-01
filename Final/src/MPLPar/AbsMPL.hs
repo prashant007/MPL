@@ -73,8 +73,6 @@ newtype TokFork = TokFork ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 newtype TokDCare = TokDCare ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
-newtype TokString = TokString ((Int,Int),String)
-  deriving (Eq, Ord, Show, Read)
 newtype UIdent = UIdent ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 newtype PIdent = PIdent ((Int,Int),String)
@@ -206,7 +204,7 @@ data Pattern
     | LISTPATTERN1 TokSBrO [Pattern] TokSBrC
     | PRODPATTERN [Pattern]
     | VARPATTERN PIdent
-    | STR_CONSTPATTERN TokString
+    | STR_CONSTPATTERN String
     | INT_CONSTPATTERN PInteger
     | NULLPATTERN TokDCare
   deriving (Eq, Ord, Show, Read)
@@ -244,7 +242,7 @@ data PattTerm = JUSTPATTTERM PIdent Term
   deriving (Eq, Ord, Show, Read)
 
 data ConstantType
-    = INTEGER PInteger | STRING TokString | CHAR Char | DOUBLE Double
+    = INTEGER PInteger | STRING String | CHAR Char | DOUBLE Double
   deriving (Eq, Ord, Show, Read)
 
 data RecordEntryAlt = RECORDENTRY_ALT RecordEntry

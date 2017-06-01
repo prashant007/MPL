@@ -246,7 +246,7 @@ convDefn defn
             let 
               ((patts,eithTerm),_) 
                    = head pattTerms
-              args = map pattToArgs patts 
+              args = concat $ map pattToArgs patts 
               Left term 
                    = eithTerm 
 
@@ -255,7 +255,7 @@ convDefn defn
 
         M.ProcessDefn  (nm,_,pattProc,pn) -> do 
             let 
-              args  = map pattToArgs patts 
+              args  = concat $ map pattToArgs patts 
               (patts,inchs,ochs,proc) 
                     = pattProc
               ichsN = map (\p -> (p,pn)) inchs 
@@ -332,22 +332,27 @@ transBuiltIn fn
               M.Unstring_S ->
                 C.Unstring_S
 
-              M.HeadString_S ->
-                C.HeadString_S
+              M.ToStr ->
+                C.ToStr
 
-              M.TailString_S ->
-                C.TailString_S 
+              M.ToInt ->
+                C.ToInt 
+
+              M.Append ->
+                C.Append 
 
               M.Or_B  ->
-                undefined 
+                C.Or_B 
 
               M.And_B ->   
-                undefined            
+                C.And_B           
 
 
-pattToArgs :: M.Pattern -> C.Argument 
-pattToArgs (M.VarPattern vpn) = vpn 
-
+pattToArgs :: M.Pattern -> [C.Argument] 
+pattToArgs (M.VarPattern vpn) 
+    = [vpn] 
+pattToArgs (M.ProdPattern (patts,pn)) 
+    = concat (map pattToArgs patts) 
 -- ===================================================================
 -- ===================================================================
 
@@ -367,7 +372,7 @@ convPCom pcom
           return $ C.PHalt (pn,[(ch,pn)])
 
        M.PGet   (patt,ch,pn) ->
-          return $ C.PGet (pn,pattToArgs patt,(ch,pn)) 
+          return $ C.PGet (pn,head (pattToArgs patt),(ch,pn)) 
 
        M.PPut   (term,ch,pn) -> do 
           tTerm <- convTerm term 
@@ -583,7 +588,7 @@ convPattTerm (patt:[],Left term) = do
         Just datName -> do 
           tTerm <- convTerm term
           let
-            args = map pattToArgs patts  
+            args = concat $ map pattToArgs patts  
             str_hand = ((datName,pn),(cname,pn),args)
           return (str_hand,[tTerm])
 
@@ -603,7 +608,7 @@ handleRec (patt,term,_) = do
     let 
       M.DestPattern (dest,dpatts,dpn) 
              = patt 
-      args   = map pattToArgs dpatts
+      args   = concat $ map pattToArgs dpatts
 
     tTerm <- convTerm term  
     case lookup dest dcdlist of 

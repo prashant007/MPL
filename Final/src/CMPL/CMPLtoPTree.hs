@@ -1,6 +1,6 @@
 module CMPL.CMPLtoPTree where 
 
-import CMPL.TypesCoreMPL as C 
+import qualified CMPL.TypesCoreMPL as C 
 import qualified CMPL.TypesAMPL as A 
 import CMPL.AMPLParserMeta
 
@@ -158,7 +158,7 @@ convTerm t  =
                C.Custom nmposn -> 
                    case notVars of
                        [] -> do 
-                          let arg_pn_list = map (\(TVar (v,pn)) -> (v,pn)) terms
+                          let arg_pn_list = map (\(C.TVar (v,pn)) -> (v,pn)) terms
                           return  [
                                     AC_CALLf  (Call (snd nmposn,"call")) 
                                               (convPIdent nmposn)
@@ -330,7 +330,7 @@ convTCall_Custom [] (stlist,comms) = do
 -- in the end reverse the string and 
 convTCall_Custom (t:ts) (strs_posn,coms) = 
     case t of
-        TVar s_posn -> do 
+        C.TVar s_posn -> do 
            convTCall_Custom ts ((s_posn:strs_posn),coms)
         othTerm -> do 
            cTerm <- convTerm t 
@@ -348,7 +348,7 @@ convTCall_Custom (t:ts) (strs_posn,coms) =
 get_Func_Name_Posn :: C.FuncName -> (String,A.PosnPair) 
 get_Func_Name_Posn fname = 
     case fname of 
-        Custom (str,pair)  -> (str,pair) 
+        C.Custom (str,pair)  -> (str,pair) 
 
 
 
@@ -506,14 +506,14 @@ convProcessCommand com = do
 
 -------------------------------------------------------------------------
 -------------------------------------------------------------------------
-convTRecs :: [(Struct_Handle,Term)] -> State Int [LABELCOMS]
+convTRecs :: [(C.Struct_Handle,C.Term)] -> State Int [LABELCOMS]
 convTRecs []     = return []
 convTRecs (r:rs) = do 
        rec'  <- convTRec r
        recs' <- convTRecs rs 
        return (rec':recs') 
 
-convTRec :: (Struct_Handle,Term) -> State Int LABELCOMS
+convTRec :: (C.Struct_Handle,C.Term) -> State Int LABELCOMS
 convTRec ((cdata_pn,dest_pn,args_pn),term) = do 
        term' <- convTerm term
        return $ Labelcoms2 (convUIdent cdata_pn   )
@@ -526,14 +526,14 @@ convTRec ((cdata_pn,dest_pn,args_pn),term) = do
 
 -------------------------------------------------------------------------
 -------------------------------------------------------------------------
-convTRecs_Proc :: [(Struct_Handle,[ProcessCommand])] -> State Int [LABELCOMS]
+convTRecs_Proc :: [(C.Struct_Handle,[C.ProcessCommand])] -> State Int [LABELCOMS]
 convTRecs_Proc []     = return []
 convTRecs_Proc (r:rs) = do 
        rec'  <- convTRec_Proc r
        recs' <- convTRecs_Proc rs 
        return (rec':recs') 
 
-convTRec_Proc :: (Struct_Handle,[ProcessCommand]) -> State Int LABELCOMS
+convTRec_Proc :: (C.Struct_Handle,[C.ProcessCommand]) -> State Int LABELCOMS
 convTRec_Proc ((cdata_pn,dest_pn,args_pn),pcoms) = do 
        pcoms' <- convProcessCommands pcoms
        return $ Labelcoms2 (convUIdent cdata_pn   )
@@ -644,8 +644,14 @@ get_command c posn = case c of
    C.Leq_C   -> AC_LEQC (Leqc (posn,"leqc")) 
    C.Eq_S    -> AC_EQS  (Eqs  (posn,"eqs")) 
    C.Leq_S   -> AC_LEQS (Leqs (posn,"leqs"))
-   C.Concat_S n  -> AC_CONCAT (ConcatS  (posn,"concatS")) (toInteger n )
-   C.Unstring_S  -> AC_UNSTRING (Unstring (posn,"unstring"))
+   C.Concat_S n    -> AC_CONCAT (ConcatS  (posn,"concatS")) (toInteger n )
+   C.Unstring_S    -> AC_UNSTRING (Unstring (posn,"unstring"))
+   C.Append        -> AC_APPEND (Append (posn,"appendL"))
+   C.ToStr         -> AC_TOSTR (ToStr (posn,"toStr"))
+   C.ToInt         -> AC_TOINT (ToInt (posn,"toInt"))
+   C.Or_B          -> AC_OR  (Or  (posn,"or"))
+   C.And_B         -> AC_AND (And (posn,"and") )
+
 
 
 

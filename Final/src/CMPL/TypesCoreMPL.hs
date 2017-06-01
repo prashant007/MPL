@@ -97,8 +97,11 @@ data Func                 =    Add_I
                              | Leq_S
                              | Concat_S Int 
                              | Unstring_S 
-                             | HeadString_S
-                             | TailString_S
+                             | ToStr
+                             | ToInt
+                             | Append
+                             | Or_B
+                             | And_B
                              deriving  (Eq,Show,Read,Generic)
 
 instance () => Out (Func)

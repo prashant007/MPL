@@ -51,6 +51,12 @@ data AMPLCOM  =
         |AMC_LEQS
         |AMC_CONCAT
         |AMC_CONCATf Int -- string data types end
+        |AMC_TOSTR
+        |AMC_TOINT
+        |AMC_APPEND
+
+        |AMC_OR
+        |AMC_AND
  
         |AMC_INT Int -- Int data types start
         |AMC_LEQ 
@@ -145,7 +151,7 @@ type DEFNS = [DEFN]
 type PROCESSES = [PROCESS]
 type AMPLCOMS =  [AMPLCOM ]
 type PROCESS = (STACK,TRANS,ENV,AMPLCOMS)
-type CHPROPERTY = (PortID,Socket,Handle,Bool,(TChan VAL)) 
+type CHPROPERTY = (PortID,Socket,Maybe Handle) 
 type CH_MAP = M.Map CH CHPROPERTY
 
 type ErrorMsg             = String
@@ -236,6 +242,14 @@ data COM =
  | AC_MUL   PosnPair 
  | AC_DIVQ  PosnPair 
  | AC_DIVR  PosnPair           -- Int data type end
+
+ | AC_TOSTR PosnPair
+ | AC_TOINT PosnPair
+
+ | AC_OR PosnPair
+ | AC_AND PosnPair
+
+ | AC_APPEND PosnPair
 
  | AC_STRUCT STRUCTOR_NAME [NamePnPair]
  | AC_CASEf  PosnPair [(STRUCTOR_NAME,[NamePnPair],COMS)]

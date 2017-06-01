@@ -1,75 +1,74 @@
 module CMPL.Terminal where
 
-import Network
-import Control.Concurrent
 import System.IO
-import Text.Printf
-import Data.IORef
-import Control.Concurrent.STM.TChan
-import Control.Monad.STM
-import System.Cmd
+
 import System.Console.ANSI
+import Data.Char 
 
 import Control.Monad
-
+import Control.Monad.Trans.State.Lazy
+import Control.Monad.IO.Class
 import CMPL.TypesAMPL
 
-{-
-  ghc-options: -O3 
-               -threaded
-               -with-rtsopts=-N3
--}
 
 equalS = replicate 80 '='
 stars  = replicate 70 '*'
+
+
+validNumber :: String -> Either String VAL   
+validNumber strVal 
+    = case (and.map isDigit) strVal of 
+        True  ->
+          return (V_INT (read strVal ::Int))
+
+        False -> 
+          Left $ strVal ++ " is not a valid number.Try again."
+
  
-communicateT sock h tchan bool1 ch (comm,val,num) = do
-    hSetSGR h [(SetConsoleIntensity BoldIntensity),(SetColor Foreground Vivid Cyan),(SetColor Background Dull Blue)]
-    let chn = uniform_ch_length ch 
-    --hPutStrLn h (equalS  ++ "\n" ++ equalS)  
-    hPutStrLn h ("\n" ++ (replicate 34 '=') ++ "CHANNEL " ++
-                 chn ++ (replicate 34 '=') ++ "\n")
-    
-    --hPutStrLn h (equalS ++ "\n\n")
-    let stars = " ****************************************" 
-    hSetTitle h $ stars ++ " CHANNEL   " ++ chn  ++ stars ++ "*****************"
-    hSetSGR h [(SetColor Foreground Vivid Cyan),(SetColor Background Dull Black)]
-    if (comm == "put")
-        then do
-            case val of
-                V_INT n' -> do
-                       hPutStrLn h $  show n'  
-                V_CHAR c -> do
-                       hPutChar h c   
-                                     
-        else do
-            hPutStr h "> "    
-    communicateTHelper h tchan ch (comm,val,num)
-    hClose h 
-    --sClose sock
+handle_GET :: CH -> Handle -> StateT CH_MAP IO VAL 
+handle_GET n handle = do
+    case (-99 < n) && (n <= 0)  of
+        True -> do 
+          liftIO $ hPutStr handle "> "
+          strVal <- liftIO $ hGetLine handle
+          liftIO $ putStrLn $ "Number " ++ strVal ++ " entered on channel " 
+                              ++ show n  ++ "\n" ++ stars
+          case validNumber strVal of 
+            Left emsg -> do 
+                liftIO $ hPutStrLn handle emsg 
+                handle_GET n handle
 
-communicateTHelper h tchan ch (comm,val,n)  
-         | n <= 0 && n >= -99 = do
-            line <- hGetLine h
-            putStrLn $ "The entered number is " ++ line
-            let intVal = V_INT (read line::Int)
-            atomically $ writeTChan tchan intVal
-            communicateTHelper h tchan ch (comm,val,n)  
-         | n <= -100  && n >= -199 = do
-            char1 <- hGetChar h
-            putStrLn $ "The entered character is " ++ (char1 :[])
-            let charVal = V_CHAR char1
-            atomically $ writeTChan tchan charVal 
-            communicateTHelper h tchan ch (comm,val,n)    
+            Right val ->     
+                return val   
+            
+        False -> do
+          char1 <- liftIO $ hGetChar handle   
+          liftIO $ putStrLn $ "Character " ++ char1:[] ++ 
+                              " entered on channel " ++ show n  ++ stars 
+          let 
+            val = V_CHAR char1
+          return val 
+
+handle_PUT :: CH -> VAL -> Handle -> StateT CH_MAP IO ()
+handle_PUT ch m handle = do 
+    case m of
+      V_INT n' -> do
+        liftIO $ hPutStrLn handle $  show  n'  
+
+      V_CHAR c -> do
+        liftIO $ hPutChar handle c 
 
 
+printOnHandle :: Handle -> CH -> IO ()
+printOnHandle h chn = do  
+    let 
+      uchn  = uniform_ch_length chn 
+      uch   = (replicate 34 '=') ++ "CHANNEL " ++ 
+              uchn ++ (replicate 34 '=')
+      reprs = unlines [equalS,equalS,uch,equalS,equalS]
 
-communicate ::  Socket -> Bool -> CH -> (String,VAL,Int) -> IO (TChan VAL,Handle)
-communicate sock bool1 ch (comm,val,num) = do
-    b <- atomically $ newTChan
-    (h,host,po) <- accept sock
-    forkIO $ communicateT sock  h b bool1 ch  (comm,val,num)
-    return (b,h) 
+    hPutStrLn h reprs
+
 
 uniform_ch_length :: Int -> String 
 uniform_ch_length ch 

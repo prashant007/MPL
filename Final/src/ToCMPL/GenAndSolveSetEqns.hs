@@ -75,8 +75,10 @@ getVarsL term
           (concat.map getVarsL_PT) pattTerms 
 
         TFold   (fterm,foldPatts,pn) ->
-          getVarsL fterm ++ 
-          (concat.map getVarsL) (map (\(_,_,a,_) -> a) foldPatts)
+          getVarsL fterm ++ (termVars \\ pattVars)
+          where 
+            termVars = (nub.concat.map getVarsL) (map (\(_,_,a,_) -> a) foldPatts)
+            pattVars = (concat.map getpattString) (concat(map (\(_,b,_,_) -> b) foldPatts))
 
         TCons   (_,terms,_) ->
           (concat.map getVarsL) terms
@@ -92,14 +94,34 @@ getVarsL term
 
 
 getVarsL_rec :: [(Pattern,Term,PosnPair)] -> [FVar]
-getVarsL_rec tList = concat $ map getVarsL (map (\(a,b,c) -> b) tList)
+getVarsL_rec tList = nub termVars \\ pattVars
+    where
+      allterms = map (\(a,b,c) -> b) tList
+      allPatts = map (\(a,b,c) -> a) tList
+      termVars = (concat.map getVarsL) allterms
+      pattVars = (concat.map getpattString) allPatts
 
 {-
 At this point all the terms on the right are Left terms.
 -}
 getVarsL_PT :: PatternTermPhr -> [FVar]
-getVarsL_PT (_,Left term)
-    = getVarsL term 
+getVarsL_PT (patts,Left term)
+    = nub (getVarsL term) \\ bvars 
+  where
+    bvars = concat $ map getpattString  patts 
+
+
+getpattString :: Pattern -> [String]
+getpattString patt 
+    = case patt of 
+        ConsPattern (_,patts,_) ->
+          (concat.map getpattString) patts 
+        DestPattern (_,patts,_) ->
+          (concat.map getpattString) patts 
+        ProdPattern (patts,_) ->
+          (concat.map getpattString) patts 
+        VarPattern (var,_) -> [var]
+        otherwise -> []
 
 -- ========================================================================
 -- ========================================================================

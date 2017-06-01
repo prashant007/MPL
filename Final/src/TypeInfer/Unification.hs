@@ -21,9 +21,11 @@ check (texpr1,texpr2)
                        False -> do 
                            let 
                              (t1,t2) = showErrorFun texpr1 texpr2
+                          -- showError t2
+                          -- printTypePn t1 
                            Left $ "Fails Occurs Check:" ++
-                                  "Can't match given type <<" ++ showError t2
-                                   ++ ">> with actual type <<" ++ printTypePn t1 
+                                  "Can't match given type <<" ++ show texpr1
+                                   ++ ">> with actual type <<" ++ show texpr2 
 
 -- here too the second expression is a TVar 
 -- return True if occurs check is passed

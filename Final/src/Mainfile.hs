@@ -38,6 +38,7 @@ import qualified Data.Map as Map
 
 myLLexerMPL = resolveLayout True .myLexer
 
+                      {-
 main = do 
    args <- getArgs
    case args of 
@@ -49,6 +50,55 @@ main = do
           tokens   = myLLexerMPL conts
           errPTree = pMPL tokens
         case errPTree of 
+            Bad s -> do 
+                putStrLnRed $ "Error in Parsing \n" ++ show  s     
+
+            Ok pTree -> do 
+                let 
+                  astMPL   = evalState (transMPL  pTree) []
+                  preP_MPL = preprocessBefTyping astMPL
+
+                putStrLn $ prettyStyle zigStyle preP_MPL
+
+                let 
+                  finMPL_AST = pattCompile preP_MPL
+                case finMPL_AST of 
+                   Left mplEmsg -> 
+                      putStrLn $ unlines 
+                        [equalS,equalS,mplEmsg,equalS,equalS]
+
+                   Right fMPL  -> do
+                      putStrLn $ prettyStyle zigStyle fMPL
+
+                      let 
+                        astCMPL   = convMPL fMPL
+
+                        ptreeAMPL = CP.convEverything astCMPL
+                        ampl_prog = PA.printTree ptreeAMPL
+                        astAMPL   = SA.transAMPLCODE ptreeAMPL
+                      
+                        mach      = CALL.compile_all astAMPL
+                      --putStrLn $ prettyStyle zigStyle cMPL_AST
+                      putStrLn ampl_prog
+                      ans <- evalStateT (AM.run_cm' mach) (Map.empty)
+                      let ans' = prettyStyle zigStyle ans 
+                      putStrLn ans'
+                      -}                  
+  
+main = do 
+   args <- getArgs
+   case args of 
+     [] -> do
+        putStrLn "Error:Expecting a file name as an argument.Try Again."
+     (fname:xs) -> do
+        conts <- readFile fname
+        let 
+          tokens   = myLLexerMPL conts
+          errPTree = pMPL tokens
+        case errPTree of 
+            Bad s -> do 
+                putStrLnRed $ "Error in Parsing \n" ++ show  s     
+                
             Ok pTree -> do 
                 let 
                   astMPL   = evalState (transMPL  pTree) []
@@ -56,8 +106,9 @@ main = do
 
                 putStrLn $ prettyStyle zigStyle preP_MPL
                 case typeMPL preP_MPL of 
-                   Left emsg -> 
+                   Left emsg -> do 
                      putStrLn emsg 
+                    
                    Right typemsg -> do
                      let 
                        msg  = "Do you want to see the types?"
@@ -88,10 +139,6 @@ main = do
                           ans <- evalStateT (AM.run_cm' mach) (Map.empty)
                           let ans' = prettyStyle zigStyle ans 
                           putStrLn ans' 
-                           
-
-            Bad s -> do 
-                putStrLnRed $ "Error in Parsing \n" ++ show  s     
 
 
 printMsg :: String -> Maybe String ->  Bool -> IO ()
@@ -148,130 +195,67 @@ getDefnFromstmt :: TypeInfer.MPL_AST.Stmt -> TypeInfer.MPL_AST.Defn
 getDefnFromstmt (DefnStmt (ds,_,_)) = head ds 
 
 
-defnStmt = 
- DefnStmt ([FunctionDefn (Custom "random",
-                          NoType,
-                          [(([VarPattern ("x", (19, 3)),VarPattern ("y", (19, 5)),
-                              VarPattern ("z", (19, 7))],
-                             Left $ TLet (TConst (ConstInt 1, (20, 12)),
-                                        [LetDefn (FunctionDefn (Custom "letFun",
-                                                                NoType,
-                                                                [(([VarPattern ("p",
-                                                                                (23,
-                                                                                 16))],
-                                                                   Left $ TCallFun (BuiltIn Add_I,
-                                                                                  [TVar ("p",
-                                                                                         (23,
-                                                                                          22)),
-                                                                                   TVar ("z",
-                                                                                         (23,
-                                                                                          26))],
-                                                                                  (23,
-                                                                                   26))),
-                                                                  (23, 16))],
-                                                                (22, 13)))],
-                                        (19, 12))),
-                            (19, 3))],
-                          (18, 1))],
-           [],
-           (18, 1))
+output = getfreeVarsDefn funDefn
 
-letDefn_Fun1 =
-  FunctionDefn (Custom "letFun",
-                NoType,
-                [(([VarPattern ("p",
-                                (23,
-                                 16))],
-                   Left $ TCallFun (BuiltIn Add_I,
-                                  [TVar ("p",
-                                         (23,
-                                          22)),
-                                   TVar ("p",
-                                         (23,
-                                          26))],
-                                  (23,
-                                   26))),
-                  (23, 16))],
-                (22, 13))
-
-letDefn_Fun2 =
-  FunctionDefn (Custom "someFun",
-                NoType,
-                [(([VarPattern ("p",
-                                (23,
-                                 16))],
-                   Left $ TCallFun (Custom "letFun",
-                                  [
-                                   TVar ("y",
-                                         (23,
-                                          26))
-                                  ],
-                                  (23,
-                                   26))),
-                  (23, 16))],
-                (22, 13))
-
-lf1 =
-  FunctionDefn (Custom "f1",
-                            NoType,
-                            [(([VarPattern ("a",
-                                            (21,
-                                             16))],
-                               Left $ TCallFun (BuiltIn Add_I,
-                                              [TVar ("a",
-                                                     (21,
-                                                      22)),
-                                               TCallFun (Custom "f2",
-                                                         [TVar ("x",
-                                                                (21,
-                                                                 30))],
-                                                         (21,
-                                                          26))],
-                                              (21,
-                                               26))),
-                              (21, 16))],
-                            (20, 13))
-
-lf2 = 
-    FunctionDefn (Custom "f2",
-                              NoType,
-                              [(([VarPattern ("b",
-                                              (24,
-                                               16))],
-                                 Left $ TCallFun (BuiltIn Add_I,
-                                                [TVar ("b",
-                                                       (24,
-                                                        22)),
-                                                 TCallFun (Custom "f3",
-                                                           [TVar ("y",
-                                                                  (24,
-                                                                   30))],
-                                                           (24,
-                                                            26))],
-                                                (24,
-                                                 26))),
-                                (24, 16))],
-                              (23, 13))
-
-lf3 =
-  FunctionDefn (Custom "f3",
-                          NoType,
-                          [(([VarPattern ("c",
-                                          (27,
-                                           16))],
-                             Left $ TCallFun (BuiltIn Add_I,
-                                            [TVar ("c",
-                                                   (27,
-                                                    21)),
-                                             TCallFun (Custom "f1",
-                                                       [TVar ("z",
-                                                              (27,
-                                                               29))],
-                                                       (27,
-                                                        25))],
-                                            (27,
-                                             25))),
-                            (27, 16))],
-                          (26, 13))
-
-funList  = [lf1,lf2,lf3]
+funDefn =
+ FunctionDefn (Custom "rev_help",
+                          StrFType (["A"],
+                                    TypeFun ([TypeDataType ("List",
+                                                            [TypeVar ("A",
+                                                                      (46,
+                                                                       26))],
+                                                            (46,
+                                                             26)),
+                                              TypeDataType ("List",
+                                                            [TypeVar ("A",
+                                                                      (46,
+                                                                       30))],
+                                                            (46,
+                                                             30))],
+                                             TypeDataType ("List",
+                                                           [TypeVar ("A",
+                                                                     (46,
+                                                                      37))],
+                                                           (46,
+                                                            37)),
+                                             (46,
+                                              9))),
+                          [(([ConsPattern ("Nil",
+                                           [],
+                                           (47,
+                                            13)),
+                              VarPattern ("rList",
+                                          (47,
+                                           20))],
+                             Left (TVar ("rList",
+                                        (47, 29)))),
+                            (47, 13)),
+                           (([ConsPattern ("Cons",
+                                           [VarPattern ("x",
+                                                        (48,
+                                                         14)),
+                                            VarPattern ("xs",
+                                                        (48,
+                                                         16))],
+                                           (48,
+                                            14)),
+                              VarPattern ("rList",
+                                          (48,
+                                           20))],
+                             Left (TCallFun (Custom "rev_help",
+                                            [TVar ("xs",
+                                                   (48,
+                                                    38)),
+                                             TCons ("Cons",
+                                                    [TVar ("x",
+                                                           (48,
+                                                            41)),
+                                                     TVar ("rList",
+                                                           (48,
+                                                            43))],
+                                                    (48,
+                                                     41))],
+                                            (48,
+                                             29)))),
+                            (48, 14))],
+                          (46, 9))

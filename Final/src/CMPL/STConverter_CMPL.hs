@@ -721,7 +721,7 @@ transDataName x = case x of
 --------------------------------------------------------------------------------
 
 flist2args = ["addI","subI","mul_I","quot_I","rem_I","eq_I","leq_I","eq_C",
-              "leq_C","eqS","leqS","concatS"]
+              "leq_C","eqS","leqS","concatS","and","or","toInt","toStr","appendL"]
 
 --flis
 
@@ -741,6 +741,11 @@ transFIdent x nargs = case x of
                       ("eqS",       pn)     -> C.Inbuilt (C.Eq_S,      pn)
                       ("leqS",      pn)     -> C.Inbuilt (C.Leq_S,     pn)
                       ("concatS",   pn)     -> C.Inbuilt (C.Concat_S nargs,pn)
+                      ("toStr",     pn)     -> C.Inbuilt (C.ToStr,     pn) 
+                      ("toInt",     pn)     -> C.Inbuilt (C.ToInt,     pn) 
+                      ("or",        pn)     -> C.Inbuilt (C.Or_B,     pn) 
+                      ("and",       pn)     -> C.Inbuilt (C.And_B,     pn)
+                      ("appendL",   pn)     -> C.Inbuilt (C.Append,    pn) 
                       (str,         pn)     ->
                              case str `elem` ["unstring"] of 
                                       True  -> error $ equalsST ++ femsg pn ++ " Function " ++

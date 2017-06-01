@@ -44,8 +44,6 @@ takeCareofDefn defn
               sthg -> error $ "\n" ++ show sthg
 
 
-
-
 takeCareofFun :: Defn -> 
                  EitherT ErrorMsg (State (Int,TypeThing,Context,ChanContext,SymbolTable)) 
                                   ([Defn],Log,[TypeEqn])
@@ -98,7 +96,8 @@ takeCareofProcDefns defns = do
             Left errormsg -> do 
                 left $ "Error in mutual processes \n\n" ++
                        intercalate "," (map show (getAllProcNames defns))
-                       ++"\n" ++ errormsg
+                       ++"\n" ++ errormsg 
+
 
             Right logpack -> do 
                  let 
@@ -152,7 +151,7 @@ takeCareofProcDefn defn@(ProcessDefn (pname,mfunType,pattProc,posn)) = do
             Left errormsg -> do 
                 let
                    emsg = ["Type error in process <<",show pname, ">> defined ",
-                           printPosn posn, "\n", errormsg,"\n\n"]
+                           printPosn posn, "\n", errormsg,"\n\n",prettyStyle zigStyle procEqns]
                            --prettyStyle zigStyle procEqns] 
 
                 left $ concat emsg 

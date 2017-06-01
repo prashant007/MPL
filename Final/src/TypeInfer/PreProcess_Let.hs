@@ -27,6 +27,7 @@ preproc_Defn defn
         otherwise -> 
           defn 
 
+
 preproc_pattTerm :: (PatternTermPhr,PosnPair) -> (PatternTermPhr,PosnPair)
 preproc_pattTerm ((patts,eithTerm),pn)
     = case eithTerm of 
@@ -49,11 +50,18 @@ pattTerm_help :: Term -> Term
 pattTerm_help term
     = case term of 
           TLet (lTerm,lWhrs,pn) ->
-                handleLet_help letPatts lTerm letDefn pn
+                handleLet_help letPatts lTerm newLetDefns pn
              where 
                letDefn = filter isFunDefnLWhr lWhrs
+               newLetDefns
+                       = map (\(LetDefn d) -> LetDefn (preproc_Defn d)) letDefn
                letPatts= lWhrs \\ letDefn
-
+          
+          TCase (term,pattTerms,pn) -> 
+              TCase (term,finCasePatts,pn) 
+            where
+              pattsPosn    = map (\x -> (x,(0,0))) pattTerms
+              finCasePatts = map fst (map preproc_pattTerm pattsPosn) 
           otherwise ->  
                 term
 
@@ -72,7 +80,7 @@ the defintions
 handleLet_help :: [LetWhere] -> Term -> [LetWhere] -> PosnPair ->  Term  
 
 handleLet_help [] letTerm letDefn posn
-      = TLet (letTerm,letDefn,posn)  
+      = TLet (letTerm, letDefn,posn)  
 
 handleLet_help ret@(lwhr:rest) origLTerm letDefn pn 
       = let 

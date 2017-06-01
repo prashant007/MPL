@@ -10,7 +10,7 @@ builtInFunList
            Add_I,Sub_I,Mul_I,DivQ_I,DivR_I,
            Eq_I,Neq_I,Leq_I,Geq_I,LT_I,GT_I,
            Eq_C,Eq_S,Concat_S,Unstring_S,
-           HeadString_S,TailString_S,Or_B,And_B
+           Or_B,And_B,Append,ToStr,ToInt
           ]
           
 funcNameList :: [FuncName]
@@ -59,20 +59,30 @@ makeSymTabThing fn@(BuiltIn func)
                   (fn,concatStrFunType)
               Unstring_S -> 
                   (fn,commStrFunType "strout")
-              HeadString_S ->
-                  (fn,commStrFunType "charout")
-              TailString_S ->
-                  (fn,commStrFunType "charout") 
               Or_B  ->
                   (fn,commBoolFunTypes)
               And_B ->
                   (fn,commBoolFunTypes)
 
+              ToStr ->
+                  (fn,toStr_Type)
+
+              ToInt ->
+                  (fn,toInt_Type) 
+
+              Append ->
+                  (fn,append_Type) 
+
 intType :: Type 
 intType = TypeConst (BaseInt,(0,0))
 
+
+
 boolType :: Type 
 boolType = TypeDataType ("Bool",[],(0,0))
+
+listCharType :: Type 
+listCharType = TypeDataType ("List",[charType],(0,0))
 
 charType :: Type 
 charType = TypeConst (BaseChar,(0,0))
@@ -82,6 +92,38 @@ stringType = TypeConst (BaseString,(0,0))
 
 varType :: Type
 varType = TypeVar ("A",(0,0))
+
+
+toInt_Type :: (FunType,NumArgs) 
+toInt_Type 
+      =    ( 
+               StrFType (
+                          ["A"],
+                          TypeFun ([varType],intType,(0,0))
+                         ),1
+               
+            ) 
+
+toStr_Type :: (FunType,NumArgs) 
+toStr_Type 
+      =    ( 
+               StrFType (
+                          ["A"],
+                          TypeFun ([varType],listCharType,(0,0))
+                         ),1
+               
+            ) 
+
+
+append_Type :: (FunType,NumArgs) 
+append_Type
+      =    ( 
+               StrFType (
+                          ["A"],
+                          TypeFun ([varType,varType],varType,(0,0))
+                         ),1
+               
+            ) 
 
 paramFun :: Type -> (FunType,NumArgs)
 paramFun otype 
@@ -151,7 +193,7 @@ commStrFunType arg
                ( 
                    StrFType (
                               [],
-                              TypeFun ([stringType],stringType,(0,0))
+                              TypeFun ([stringType],listCharType,(0,0))
                              ),
                    1
                 ) 
@@ -164,8 +206,7 @@ commStrFunType arg
                              ),
                    1
                 ) 
-           otherwise ->
-                error $ "Not valid type" ++ arg 
+
 
 commBoolFunTypes :: (FunType,NumArgs)
 commBoolFunTypes

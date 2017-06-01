@@ -404,9 +404,10 @@ data Func =        Add_I
                  | Eq_C
                  | Eq_S
                  | Concat_S  
-                 | Unstring_S 
-                 | HeadString_S
-                 | TailString_S
+                 | Unstring_S
+                 | ToStr
+                 | ToInt
+                 | Append
                  | Or_B
                  | And_B
                  deriving  (Eq,Show,Read,Generic)
