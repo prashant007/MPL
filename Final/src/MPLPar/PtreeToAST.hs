@@ -180,18 +180,18 @@ transInfix1op x = case x of
 transInfix2op :: Infix2op -> M.FuncName
 transInfix2op x = case x of
   Infix2op string -> case string of 
-        "==" -> detectFun "eqI"
-        "/=" -> detectFun "notEqI"
-        "<"  -> detectFun "leqI"
-        ">"  -> detectFun "geqI" 
-        "<=" -> detectFun "leqI"
-        ">=" -> detectFun "geqI"
+        "==" -> detectFun "eq"
+        "/=" -> detectFun "neq"
+        "<"  -> detectFun "lt"
+        ">"  -> detectFun "gt" 
+        "<=" -> detectFun "leq"
+        ">=" -> detectFun "geq"
         otherwise -> error $ "wrong symbol::" ++ string
       
 
 transInfix3op :: Infix3op -> M.FuncName
 transInfix3op x = case x of
-  Infix3op string -> detectFun "append"
+  Infix3op string -> detectFun "appendL"
 
 transInfix4op :: Infix4op -> M.FuncName
 transInfix4op x = case x of
@@ -820,7 +820,7 @@ fromStrToType (posn,str)
         | str == "Int"    = M.TypeConst (M.BaseInt,posn)
         | str == "Double" = M.TypeConst (M.BaseDouble,posn)
         | str == "Char"   = M.TypeConst (M.BaseChar,posn)
-        | str == "String" = M.TypeDataType ("List", [M.TypeConst (M.BaseChar,posn)],posn)
+        | str == "String" = M.TypeConst (M.BaseString,posn)
         | otherwise       = M.TypeVar (str,posn)
        
 
@@ -1643,17 +1643,14 @@ detectFun name
         | name == "mulI"  = M.BuiltIn (M.Mul_I)
         | name == "quotI" = M.BuiltIn (M.DivQ_I)
         | name == "remI"  = M.BuiltIn (M.DivR_I) 
-        | name == "eqI"   = M.BuiltIn (M.Eq_I)
-        | name == "leqI"  = M.BuiltIn (M.Leq_I)
-        | name == "notEqI"= M.BuiltIn (M.Neq_I)
-        | name == "lessI" = M.BuiltIn (M.LT_I)
-        | name == "grtI"  = M.BuiltIn (M.GT_I) 
-        | name == "geqI"  = M.BuiltIn (M.Geq_I)
-        | name == "eqC"   = M.BuiltIn (M.Eq_C)
-        | name == "eqS"   = M.BuiltIn (M.Eq_S)
-        | name == "concat" = M.BuiltIn (M.Concat_S)
-        | name == "appendL"= M.BuiltIn (M.Append)
-        | name == "unstring"   = M.BuiltIn (M.Unstring_S)
+        | name == "eq"   = M.BuiltIn (M.Ceq)
+        | name == "neq"   = M.BuiltIn (M.Neq)
+        | name == "geq"   = M.BuiltIn (M.Geq)
+        | name == "leq"  = M.BuiltIn (M.Leq)
+        | name == "lt"    = M.BuiltIn (M.Lt)
+        | name == "gt"     = M.BuiltIn (M.Gt) 
+        | name == "appendL"  = M.BuiltIn (M.Append)
+        | name == "unstring" = M.BuiltIn (M.Unstring)
         | name == "toStr" = M.BuiltIn (M.ToStr)
         | name == "toInt" = M.BuiltIn (M.ToInt)
         | name == "orB"         = M.BuiltIn (M.Or_B)

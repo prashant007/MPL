@@ -395,21 +395,27 @@ fun_Const (bval,posn) = do
         let
           eqn = TSimp (
                        TypeVarInt typeConst,
-                       TypeConst (baseValToBType bval,posn)
+                       baseValToBType bval posn
                        )
         return $ [eqn]  
   
-baseValToBType :: BaseVal -> BaseType 
-baseValToBType bval 
+baseValToBType :: BaseVal -> PosnPair ->  Type 
+baseValToBType bval pn
         = case bval of 
               ConstInt _  ->
-                  BaseInt
+                  TypeConst(BaseInt,pn)
               ConstChar _ ->
-                  BaseChar
+                  charType pn 
               ConstString _ -> 
-                  BaseString
+                  TypeConst (BaseString,pn)
               ConstDouble _ ->
-                  BaseDouble
+                  TypeConst(BaseDouble,pn)
+
+listCharType :: PosnPair -> Type 
+listCharType pn = TypeDataType ("List",[charType pn],pn)
+
+charType :: PosnPair -> Type
+charType pn = TypeConst (BaseChar,pn)
 
 -- =========================================================================================
 -- ========================================================================================= 

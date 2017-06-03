@@ -302,35 +302,23 @@ transBuiltIn fn
               M.DivR_I ->
                 C.DivR_I
 
-              M.Eq_I   ->
-                C.Eq_I
+              M.Ceq   ->
+                C.Ceq
 
-              M.Neq_I  ->
-                undefined
+              M.Neq  ->
+                C.Neq
 
-              M.Leq_I  ->
-                C.Leq_I
+              M.Leq  ->
+                C.Leq
 
-              M.Geq_I  -> 
-                undefined 
+              M.Geq  -> 
+                C.Geq 
 
-              M.LT_I   ->
-                undefined  
+              M.Lt   ->
+                C.Lt   
 
-              M.GT_I   ->
-                undefined 
-
-              M.Eq_C   ->
-                C.Eq_C
-
-              M.Eq_S   ->
-                C.Eq_S
-
-              M.Concat_S -> 
-                C.Concat_S 2 
-
-              M.Unstring_S ->
-                C.Unstring_S
+              M.Gt    ->
+                C.Gt 
 
               M.ToStr ->
                 C.ToStr
@@ -340,6 +328,9 @@ transBuiltIn fn
 
               M.Append ->
                 C.Append 
+
+              M.Unstring ->
+                C.Unstring
 
               M.Or_B  ->
                 C.Or_B 

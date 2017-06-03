@@ -30,19 +30,22 @@ position token Call        {"call"} ;
 position token ConstInt    {"cInt"} ;
 position token ConstChar   {"cChar"} ;
 position token ConstString {"cString"} ;
+
 position token ToStr    {"toStr"} ;
 position token ToInt    {"toInt"}  ;  
+
 position token And      {"And"}  ;
 position token Or       {"or"}  ;
 position token Append   {"appendL"} ;
-position token Unstring {"unstring"} ;
-position token LeqI     {"leq"} ;
-position token EqI      {"eq"} ;
-position token Leqc     {"leqc"} ;
-position token Eqc      {"eqc"} ;
-position token Leqs     {"leqs"} ;
-position token Eqs      {"eqs"} ;
-position token ConcatS  {"concatS"} ;
+position token Unstring {"Unstring"};
+
+position token Geq      {"geq"} ;
+position token Leq      {"leq"} ;
+position token CEQ       {"eq"} ;
+position token Neq      {"neq"} ;
+position token Gt       {"gt"} ;
+position token Lt       {"lt"} ;
+
 position token Add      {"add"} ;
 position token Subtract {"subtract"} ;
 position token Mul      {"mul"} ;
@@ -164,17 +167,22 @@ AC_CHAR    .COM   ::= ConstChar Character ;
 AC_STRING  .COM   ::= ConstString String ;
 AC_TOSTR   .COM   ::= ToStr ;
 AC_TOINT   .COM   ::= ToInt ;
-AC_AND     .COM   ::= And ;
-AC_OR      .COM   ::= Or ;
+
 AC_APPEND  .COM   ::= Append ; 
 AC_UNSTRING.COM   ::= Unstring ;
-AC_LEQ     .COM   ::= LeqI ;
-AC_EQ      .COM   ::= EqI  ;
-AC_LEQC    .COM   ::= Leqc ;
-AC_EQC     .COM   ::= Eqc ;
-AC_LEQS    .COM   ::= Leqs ;
-AC_EQS     .COM   ::= Eqs ;
-AC_CONCAT  .COM   ::= ConcatS Integer ;
+
+AC_LEQ     .COM   ::= Leq ;
+AC_GEQ     .COM   ::= Geq ;
+
+AC_EQ      .COM   ::= CEQ  ;
+AC_NEQ     .COM   ::= Neq ;
+
+AC_LT      .COM   ::= Lt ;
+AC_GT      .COM   ::= Gt ;
+
+AC_AND     .COM   ::= And ; 
+AC_OR      .COM   ::= Or  ;
+
 AC_ADD     .COM   ::= Add ;
 AC_SUB     .COM   ::= Subtract ;
 AC_MUL     .COM   ::= Mul ;

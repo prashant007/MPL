@@ -156,10 +156,10 @@ checkCOM com
 
     where 
          commlist = ["AC_CALLf","AC_GETf","AC_ADD","AC_STRUCT","AC_SUB",
-                     "AC_MUL", "AC_LEQ" ,"AC_EQ","AC_EQC" ,"AC_LEQC",
-                     "AC_EQCf" ,"AC_DIVQ","AC_DIVR",
-                     "AC_INT", "AC_CHAR","AC_STRING","AC_UNSTRING","AC_EQS","AC_CONCATf"
-                     ,"AC_CONCAT","AC_RECORDf","AC_DESTl","AC_DESTlas"]
+                     "AC_MUL", "AC_NEQ" , "AC_EQ","AC_LEQ" ,"AC_GEQ",
+                     "AC_LT" ,"AC_GT", "AC_EQCf" ,"AC_DIVQ","AC_DIVR","AC_AND","AC_OR",
+                     "AC_INT", "AC_CHAR","AC_STRING","AC_UNSTRING","AC_APPEND","AC_TOINT",
+                     "AC_TOSTR","AC_RECORDf","AC_DESTl","AC_DESTlas"]
          com'    = (head.words.show) com
 
 
@@ -172,12 +172,10 @@ transCOM x = case x of
   AC_RET    (Ret  (posn,_))             -> T.AC_RET posn 
   AC_CALLf  (Call (posn,_)) id ids      -> T.AC_CALLf posn (transPIdent id)
                                                            (map transPIdent ids)
-  AC_INT    (ConstInt (posn,_)) cint    -> T.AC_INT posn    (transCInteger cint)
-  AC_CHAR   (ConstChar(posn,_)) char    -> T.AC_CHAR posn   (transCharacter char)
-  AC_STRING (ConstString (posn,_)) ustr -> T.AC_STRING posn  (ustr,(0,0)) --(transCString ustr)  -- string functions start
-  AC_UNSTRING (Unstring (posn,_))       -> T.AC_UNSTRING posn 
-  AC_EQS    (Eqs(posn,_))               -> T.AC_EQS posn 
-  AC_LEQS   (Leqs(posn,_))              -> T.AC_LEQS posn
+  AC_INT    ( ConstInt (posn,_)) cint    -> T.AC_INT posn    (transCInteger cint)
+  AC_CHAR    (ConstChar(posn,_)) char    -> T.AC_CHAR posn   (transCharacter char)
+  AC_STRING  (ConstString (posn,_)) ustr -> T.AC_STRING posn  (ustr,(0,0)) 
+  AC_UNSTRING(Unstring (posn,_))         -> T.AC_UNSTRING posn   
 
   AC_TOINT    (ToInt(posn,_))           -> T.AC_TOINT posn 
   AC_TOSTR    (ToStr(posn,_))           -> T.AC_TOSTR posn  
@@ -185,13 +183,15 @@ transCOM x = case x of
   AC_AND    (And(posn,_))              -> T.AC_AND posn 
   AC_OR     (Or (posn,_))              -> T.AC_OR posn  
 
-  AC_APPEND (Append(posn,_))            -> T.AC_APPEND posn  
+  AC_APPEND  (Append(posn,_))            -> T.AC_APPEND posn 
 
-  AC_CONCAT (ConcatS(posn,_)) n         -> T.AC_CONCAT posn (fromInteger n)  
-  AC_LEQ    (LeqI(posn,_))              -> T.AC_LEQ posn 
-  AC_EQ     (EqI (posn,_))              -> T.AC_EQ posn 
-  AC_LEQC   (Leqc(posn,_))              -> T.AC_LEQC posn 
-  AC_EQC    (Eqc (posn,_))              -> T.AC_EQC posn 
+  AC_LEQ    (Leq(posn,_))              -> T.AC_LEQ posn 
+  AC_GEQ    (Geq(posn,_))              -> T.AC_GEQ posn 
+  AC_EQ     (CEQ (posn,_))              -> T.AC_EQ posn 
+  AC_NEQ    (Neq (posn,_))             -> T.AC_NEQ posn 
+  AC_LT     (Lt (posn,_))              -> T.AC_LT posn 
+  AC_GT     (Gt (posn,_))              -> T.AC_GT posn 
+
   AC_ADD    (Add (posn,_))              -> T.AC_ADD posn 
   AC_SUB    (Subtract (posn,_))         -> T.AC_SUB posn 
   AC_DIVQ   (Quot (posn,_))             -> T.AC_DIVQ posn 

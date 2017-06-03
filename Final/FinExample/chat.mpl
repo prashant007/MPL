@@ -43,48 +43,34 @@ fun reverse :: [A] -> [A] =
             []    ,rList -> rList
             (x:xs),rList -> rev_help(xs,x:rList)
 
-fun append :: [A],[A] -> [A] = 
-  []   , ys -> ys 
-  x:xs , ys -> x:append (xs,ys) 
 
 fun printName :: [Char] -> [Char] =
-   name -> let  
-             append (name,mSays)
-           where
-             mSays = unstring (" says :")
+   name -> name ++ unstring (" says :")
 
 
 fun empStr :: () -> [Char] =
     -> [' ']
 
 fun formatMsg :: [Char],[Char] -> [Char] =
-    msg,name ->
+    cmsg,name ->
       let 
-        append (prnName,rmsg) 
+        prnName ++ rmsg
       where
-        rmsg    = reverse (msg)
+        rmsg    = reverse (cmsg) ++ ['\n']
         prnName = printName (name)
 
-{-
-This function concatenates a list of strings
--}
-fun concatList :: [String] -> String =
-  []   -> ""
-  x:xs -> concat (x,concatList(xs))
+
 
 fun salut :: [Char] -> [Char] =
     name ->
       let
-        append (inchs3,inchs2)
+        inStr1 ++ name ++ inStr2
       where
-        space  = "            "
-        stars  = "*********************************************\n"
-        inStr1 = concatList ([space,stars,space,space])
-        inStr2 = concatList (["\n",space,stars,"\n"])
-        inchs1 = unstring (inStr1)
-        inchs2 = unstring (inStr2)
-        inchs3 = append (inchs1,name)
-     
+        space  = unstring ("            ")
+        stars  = unstring ("*********************************************\n")
+        inStr1 = space ++ stars ++ space ++ space
+        inStr2 = ['\n'] ++ space ++ stars ++ ['\n']
+
 
 proc chatter1  =  
     mode,name |cco => c1,ch -> do 
@@ -92,10 +78,10 @@ proc chatter1  =
         Snd (msg) -> do 
           hput GetTerm on c1 
           get char on c1 
-          case eqC(char,'\n') of
+          case eq(char,'\n') of
             True  -> do 
               hput PutTerm on ch 
-              put formatMsg(char:msg,name) on ch  
+              put formatMsg(msg,name) on ch  
               chatter1 (Rcv,name|cco => c1,ch)
 
             False -> do 
@@ -126,11 +112,11 @@ proc chatter2 =
         Snd(msg) -> do 
           hput GetTerm on c2 
           get char on c2 
-          case eqC(char,'\n') of
+          case eq(char,'\n') of
             True  -> do 
               hcase ch of
                 GetTerm -> do 
-                  put formatMsg(char:msg,name) on ch 
+                  put formatMsg(msg,name) on ch 
                   chatter2 (Rcv,name,flag|ch => c2)
 
                 PutTerm -> do 
@@ -166,7 +152,7 @@ proc chatter2 =
               hput PutTerm on c2
               put ' ' on c2
               case flag == 0 of 
-                True  ->
+                True  -> do 
                   chatter2 (Rcv,name,1 | ch => c2)
                 False ->
                   chatter2 (Snd([' ']),name,flag |  ch => c2)
@@ -192,7 +178,7 @@ proc getUserName =
   name | ch => c3 -> do 
     hput GetTerm on c3 
     get char on c3  
-    case eqC (char,'\n') of
+    case eq (char,'\n') of
       True  ->
         hcase ch of
           JustGet -> do 

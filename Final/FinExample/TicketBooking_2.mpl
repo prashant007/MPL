@@ -1,6 +1,6 @@
 
-data Bool -> C =
-    False :: -> C 
+data Bool -> C = 
+    False :: -> C
     True  :: -> C 
 
 
@@ -30,9 +30,6 @@ proc ticketServer =
                get tick1 on ch1  
 
                case (tot-tick1) <= 0 of
-                  False -> do 
-                       ticketServer (tot-tick1,i+1,tot1+tick1,tot2 | ch1,ch2 => i3)
-
                   True  -> do 
                     case (tot-tick1) == 0 of
                       True -> do
@@ -52,6 +49,11 @@ proc ticketServer =
                       False -> 
                         ticketServer (tot ,i,tot1,tot2 | ch1,ch2 => i3)
 
+                  False -> do 
+                       ticketServer (tot-tick1,i+1,tot1+tick1,tot2 | ch1,ch2 => i3)
+
+
+
             False -> do 
                hput PutIntC on ch2
                -- pass the number of tickets to the client2
@@ -62,9 +64,6 @@ proc ticketServer =
                get tick2 on ch2 
                
                case (tot-tick2) <= 0 of
-                  False -> do 
-                       ticketServer (tot-tick2,i+1,tot1,tot2 + tick2 | ch1,ch2 => i3)
-
                   True -> do 
                     case (tot-tick2) == 0 of
                       True -> do 
@@ -81,6 +80,10 @@ proc ticketServer =
 
                       False -> 
                         ticketServer (tot ,i,tot1,tot2 | ch1,ch2 => i3)
+
+                  False -> do 
+                       ticketServer (tot-tick2,i+1,tot1,tot2 + tick2 | ch1,ch2 => i3)
+
 
 proc server_Main = 
     | ch => i3 -> do 

@@ -676,21 +676,12 @@ seq_step ((AMC_INT k):c,e,s)       = return (c,e,(V_INT k): s)
 ------------------------------------------------------------------------------
 seq_step ((AMC_CHAR chr):c,e,s)    = return (c,e,(V_CHAR chr): s)
 ------------------------------------------------------------------------------
-seq_step ((AMC_STRING str):c,e,s)  = return (c,e,(unstring_Help list): s)
+seq_step ((AMC_STRING str):c,e,s)  = return (c,e,(V_STRING str): s)
 ------------------------------------------------------------------------------
-seq_step ((AMC_CONCAT):c,e,V_STRING str1:V_STRING str2:s) = return (c,e,V_STRING (str2 ++ str1): s)
+seq_step ((AMC_UNSTRING):c,e,V_STRING str:s)
+       = return (c,e,(unstring_Help str):s)
 ------------------------------------------------------------------------------
-seq_step ((AMC_CONCATf n):c,e,s)  = return (c,e,V_STRING str' :s')
-           where conc_strs   = reverse $ take n s 
-                 s'          = drop n s 
-                 str'        = (concat.map remove_string_cons) conc_strs 
-                 remove_string_cons :: VAL -> String
-                 remove_string_cons (V_STRING str) = str 
-------------------------------------------------------------------------------
-seq_step (AMC_UNSTRING:c,e,(V_STRING list):s)  =
-                      return (c,e,(unstring_Help list):s)
------------------------------------------------------------------------------
-seq_step (AMC_APPEND:c,e,list1:list2:s)  =
+seq_step (AMC_APPEND:c,e,list2:list1:s)  =
                       return (c,e,(append_Help list1 list2):s)
 ------------------------------------------------------------------------------
 seq_step (AMC_TOSTR:c,e,val:s)  =
@@ -709,8 +700,8 @@ seq_step (AMC_TOINT:c,e,val:s)  =
                 False ->
                    error $ stars ++ "Can't convert <<" ++ char:[] 
                            ++ ">> to integer" ++ stars
-            V_CONS _  ->    
-              return (c,e,(string_help val):s)
+            V_STRING v  ->    
+              return (c,e,(V_INT(read v::Int)):s)
 -----------------------------------------------------------------------------
 seq_step (AMC_DIVQ:c,e,V_INT n:V_INT m:s)  = return (c,e,V_INT (quot m n):s)
 ------------------------------------------------------------------------------
@@ -722,36 +713,41 @@ seq_step (AMC_SUB:c,e,V_INT n:V_INT m:s)   = return (c,e,V_INT (m - n):s)
 ------------------------------------------------------------------------------
 seq_step (AMC_MUL:c,e,V_INT n:V_INT m:s)   = return (c,e,V_INT (m * n):s)
 ------------------------------------------------------------------------------
-seq_step (AMC_LEQ:c,e,V_INT n:V_INT m:s) 
-                         | m <= n     = return (c,e,V_CONS(2,[]):s)
+seq_step (AMC_LEQ:c,e,v2:v1:s) 
+                         | v1 <= v2   = return (c,e,V_CONS(2,[]):s)
                          | otherwise = return (c,e,V_CONS(1,[]):s)
 ------------------------------------------------------------------------------
-seq_step (AMC_EQ:c,e,V_INT n:V_INT m:s) 
-                            | n == m    = return (c,e,V_CONS(2,[]):s)
+seq_step (AMC_EQ:c,e,v2:v1:s) 
+                            | v1 == v2  = return (c,e,V_CONS(2,[]):s)
                             | otherwise = return (c,e,V_CONS(1,[]):s)
                 
 ------------------------------------------------------------------------------
-seq_step (AMC_EQC:c,e,V_CHAR n:V_CHAR m:s)  
-                       | n == m    = return (c,e,V_CONS(2,[]):s)
-                       | otherwise = return (c,e,V_CONS(1,[]):s)
+seq_step (AMC_GEQ:c,e,v2:v1:s) 
+                         | v1 >= v2  = return (c,e,V_CONS(2,[]):s)
+                         | otherwise = return (c,e,V_CONS(1,[]):s)
 ------------------------------------------------------------------------------
-seq_step (AMC_LEQC:c,e,V_CHAR n:V_CHAR m:s) 
-                       | n <= m    = return (c,e,V_CONS(2,[]):s)
-                       | otherwise = return (c,e,V_CONS(1,[]):s)
+seq_step (AMC_NEQ:c,e,v2:v1:s) 
+                            | v1 /= v2  = return (c,e,V_CONS(2,[]):s)
+                            | otherwise = return (c,e,V_CONS(1,[]):s)
+                
 ------------------------------------------------------------------------------
-seq_step (AMC_EQS:c,e,V_STRING str1:V_STRING str2:s) 
-                       | str1 == str2 = return (c,e,V_CONS(2,[]):s)
-                       | otherwise    = return (c,e,V_CONS(1,[]):s)
+
+seq_step (AMC_AND:c,e,V_BOOL b2:V_BOOL b1:s) 
+                        | b1 && b2  = return (c,e,V_CONS(2,[]):s)
+                        | otherwise = return (c,e,V_CONS(1,[]):s)
+
 ------------------------------------------------------------------------------
-seq_step (AMC_LEQS:c,e,V_STRING str1:V_STRING str2:s)
-                       | str1 <= str2 = return (c,e,V_CONS(2,[]):s)
-                       | otherwise    = return (c,e,V_CONS(1,[]):s)
+
+seq_step (AMC_OR:c,e,V_BOOL b2:V_BOOL b1:s) 
+                        | b1 || b2  = return (c,e,V_CONS(2,[]):s)
+                        | otherwise = return (c,e,V_CONS(1,[]):s)
 ------------------------------------------------------------------------------
+
 seq_step ms  = return ms --error ("no sequential step from"++(show ms))
 
 
 unstring_Help :: String -> VAL 
-unstring_Help []
+unstring_Help ""
   = V_CONS(1,[])
 unstring_Help (x:xs) 
   = V_CONS(2,(V_CHAR x):[unstring_Help xs])
@@ -767,26 +763,18 @@ check_str_validity list
     validElems = ['0'..'9']
   
 
-string_help :: VAL -> VAL 
-string_help val 
-    = stringify val ""
-        where
-          stringify :: VAL -> String -> VAL 
-          stringify (V_CONS (1,[])) str
-             = V_INT (check_str_validity (reverse str)) 
-          stringify (V_CONS (2,(V_CHAR x):ivals)) str 
-             = stringify (head ivals) (x:str)
-
 
 append_Help :: VAL -> VAL -> VAL 
-append_Help (V_STRING str1) (V_STRING str2)
-    = V_STRING (str1 ++ str2)
+append_Help (V_STRING l1) (V_STRING l2)
+    = V_STRING (l1 ++ l2)
+
 append_Help list1 list2
     = case list1 of 
         V_CONS (1,[]) -> 
           list2
         V_CONS (2,e:v:[]) -> 
           V_CONS (2,e:(append_Help v list2):[])
+        sthg -> error $ show sthg  ++ "\n" ++  show list2 
 
 
 

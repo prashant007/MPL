@@ -11,9 +11,9 @@ import Control.Monad.Trans.State.Lazy
 
 commsStr_fun :: [String]
 commsStr_fun = [
-                 "AC_STOREf,AC_LOADf,AC_RET,AC_CALLf,AC_INT,AC_LEQ,AC_EQ,AC_MUL,AC_ADD,AC_SUB", 
-                 "AC_DIVQ,AC_DIVR,AC_CHAR,AC_LEQC,AC_EQC,AC_STRING,AC_EQS,AC_LEQS,AC_CONCAT",
-                 "AC_CONCATf,AC_STRUCT,AC_CASEf","AC_RECORDf"
+                 "AC_STOREf,AC_LOADf,AC_RET,AC_CALLf,AC_INT,AC_MUL,AC_ADD,AC_SUB,AC_DIVQ,AC_DIVR", 
+                 "AC_CHAR,AC_LEQ,AC_GEQ,AC_EQ,AC_NEQ,AC_LT,AC_GT,AC_OR,AC_AND,AC_APPEND",
+                 "AC_STRUCT,AC_CASEf","AC_RECORDf","AC_STRING","AC_UNSTRING"
                ] 
            
 commsList :: [String]
@@ -54,9 +54,33 @@ compile_common pcoms@(cf:rest)  = do
             rest' <- compile_common rest 
             return $ AMC_LEQ:rest' 
 
+         AC_GEQ leq_posn        -> do
+            rest' <- compile_common rest 
+            return $ AMC_GEQ:rest' 
+
          AC_EQ eq_posn          -> do
             rest' <- compile_common rest 
             return $ AMC_EQ:rest'
+
+         AC_NEQ eq_posn          -> do
+            rest' <- compile_common rest 
+            return $ AMC_NEQ:rest'
+
+         AC_LT leq_posn        -> do
+            rest' <- compile_common rest 
+            return $ AMC_LT:rest' 
+
+         AC_GT leq_posn        -> do
+            rest' <- compile_common rest 
+            return $ AMC_GT:rest' 
+
+         AC_AND leq_posn        -> do
+            rest' <- compile_common rest 
+            return $ AMC_AND:rest' 
+
+         AC_OR leq_posn        -> do
+            rest' <- compile_common rest 
+            return $ AMC_OR:rest' 
 
          AC_MUL mul_posn        -> do
             rest' <- compile_common rest 
@@ -80,34 +104,26 @@ compile_common pcoms@(cf:rest)  = do
          AC_CHAR chr_posn (c,posn)  -> do    -- CHAR FUNCTIONS START
             rest' <- compile_common rest 
             return $ (AMC_CHAR c):rest'
-
-         AC_LEQC leqc_posn         -> do 
-            rest' <- compile_common rest 
-            return $ AMC_LEQC:rest'
-
-         AC_EQC eqc_posn          -> do
-            rest' <- compile_common rest 
-            return $ AMC_EQC:rest'
             
          AC_STRING str_posn (str,posn)  -> do    -- STRING FUNCTIONS START
             rest' <- compile_common rest
             return $ (AMC_STRING str) : rest' 
-       
-         AC_LEQS leqs_posn        -> do 
-            rest' <- compile_common rest
-            return $ AMC_LEQS : rest'
 
-         AC_EQS eqs_posn         -> do 
+         AC_TOSTR _   -> do 
             rest' <- compile_common rest
-            return $ AMC_EQS : rest'
+            return $ AMC_TOSTR : rest'              
 
-         AC_CONCAT ct_posn n     -> do
+         AC_TOINT _   -> do 
             rest' <- compile_common rest
-            return $ AMC_CONCATf n : rest'
+            return $ AMC_TOINT : rest'    
 
-         AC_UNSTRING un_posn     -> do 
-           rest' <- compile_common rest
-           return $ AMC_UNSTRING:rest'
+         AC_APPEND ct_posn -> do
+            rest' <- compile_common rest
+            return $ AMC_APPEND : rest'
+
+         AC_UNSTRING un_posn -> do
+            rest' <- compile_common rest
+            return $ AMC_UNSTRING : rest'
 
          AC_STRUCT (s1posn,s2posn) vars_posns      -> do 
             helper_STRUCT (s1posn,s2posn) vars_posns rest  

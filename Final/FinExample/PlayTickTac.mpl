@@ -22,6 +22,7 @@ data Row -> C =
 data Board -> C =
     Piece :: [Row] -> C 
 
+
 protocol ProtTerm (A) => P =
     GetTerm   :: Get (A|P) => P 
     PutTerm   :: Put (A|P) => P
@@ -39,22 +40,16 @@ coprotocol CP => Console (A) =
 -- =======================================================================
 -- ============GENERAL HELPER FUNCTIONS===================================
 
-{-
-This function concatenates a list of strings
--}
-fun concatList :: [String] -> String =
-  []   -> ""
-  x:xs -> concat (x,concatList(xs))
 
-fun append :: [A],[A] -> [A] = 
+fun myappend :: [A],[A] -> [A] = 
   []   , ys -> ys 
-  x:xs , ys -> x:append (xs,ys) 
+  x:xs , ys -> x:myappend (xs,ys) 
 
 {-
 This function checks if a given element is present in the list 
 -}
 
-fun elem :: Int,[Int] -> Bool = 
+fun elem :: A,[A] -> Bool = 
   v    ,[] ->
     False 
   v    ,x:xs ->
@@ -74,27 +69,21 @@ check if a move is a vlaid and a new move
 
 fun isRightMove :: Int,[Int] -> Either (String,Bool) =
   num,list ->
-    case num <= 9 of 
+    case (num <= 9)  of 
       True  ->
-        case num <= 0 of 
-          True  -> 
-            Left ("Move less than 0") 
-
+        case elem (num,list) of 
+          True ->
+            Left ("Move repeated")  
           False ->
-            case elem (num,list) of 
-              True ->
-                Left ("Move repeated")  
-              False ->
-                Right (True)
+            Right (True)
              
       False ->
-        Left ("Move greater than 9")
-          
+        Left ("Invalid Move.Enter a num between 1-9")
 
 {-
 checks if the first list is a part of the second list
 -}
-fun isPartOf :: [Int],[Int] -> Bool = 
+fun isPartOf :: [A],[A] -> Bool = 
   []    ,sList ->
     True
   (f:fs),sList ->
@@ -208,32 +197,28 @@ fun stars :: () -> String =
   -> "\n********************\n"
 
 fun addNL :: String -> String = 
-  piece  -> concat (piece,"\n")
+  piece  -> piece ++ "\n"
 
 fun addHL :: String -> String =
-  piece  -> concat (hLine,piece)
+  piece  -> hLine ++ piece
 
 fun repRow :: Row -> String =
   Triple (s1,s2,s3) -> 
-    let 
-      concat (s1s2,addNL (s3))
-    where
-      ns1   = addHL (s1)
-      s1s2  = concat (ns1,s2)
+      addHL (s1) ++ s2 ++ addNL (s3)
 
-fun drawBoardHelp :: [Row] ,String -> String = 
+fun drawBoardHelp :: [Row] ,String -> [Char] = 
   [],list ->
-    concatList ([list,hLine,stars])     
+    list ++ hLine ++ stars   
   (row:rest),list ->
      let 
        drawBoardHelp (rest,newList)
      where
        rowStr = repRow (row) 
-       newList = concat (list,rowStr)   
+       newList = list ++ rowStr
 
 fun drawBoard :: Board -> [Char] =
   Piece (rList) ->
-      unstring (drawBoardHelp (rList,""))
+      drawBoardHelp (rList," ")
 
 {-
 Modify the board based on the move 
@@ -270,11 +255,11 @@ proc printString =
 
 proc playerShow = 
   mode,cList | pch => c1 -> do 
-    case eqS(mode,"receive") of 
+    case mode == "receive" of 
       True -> 
         hcase pch of 
           GetTerm -> do 
-            put [' '] on pch 
+            put " " on pch 
             playerShow (mode,cList| pch => c1)
 
           PutTerm -> do
@@ -289,7 +274,7 @@ proc playerShow =
       False -> 
         case cList of 
           []  -> do 
-            playerShow ("receive",[' '] | pch => c1)
+            playerShow ("receive"," " | pch => c1)
 
           x:xs -> do 
             hput PutTerm on c1
@@ -302,34 +287,34 @@ fun errorMsg :: Int,String -> [Char] =
     let 
       case num == 1 of
         True  ->
-          unstring (xmsg)
+          xmsg
         False ->
-          unstring (ymsg)
+          ymsg
     where
       xplay = "(by player X) /Try Again.\n"
       yplay = "(by player O) /Try Again.\n"
-      xmsg  = concat (emsg,xplay) 
-      ymsg  = concat (emsg,yplay)     
+      xmsg  = emsg ++ xplay
+      ymsg  = emsg ++ yplay
 
 fun winDrawMsg :: Bool,String -> [Char] =
   win,player ->
     let 
       case win of 
         True ->
-          case eqS (player,"X") of 
+          case player == "X" of 
             True  -> helperFun ("X WINS")
             False -> helperFun ("O WINS") 
         False -> helperFun ("MATCH DRAWN")
     where
       fun helperFun :: String -> [Char] = 
-        msg -> unstring (concatList ([msg,"\n",stars]))
+        msg -> msg ++ "\n" ++ stars
 
 
 fun turnMsg :: String -> [Char] = 
   player -> 
     switch
-      eqS (player,"X")  = unstring (concatList ([stars,"X's Turn",stars])) 
-      default           = unstring (concatList ([stars,"O's Turn",stars]))       
+      player == "X"  = stars ++ "X's Turn" ++ stars 
+      default        = stars ++ "O's Turn" ++ stars
 
 -- ===================================================================
 -- =============================PLAYER 1==============================
@@ -349,7 +334,7 @@ proc closeP1 =
 
 
 proc p1Get = 
-  xs,os,bd,xRep,ct| cco => i1,pch,ch ->
+  xs,os,bd,xRep,ct| cco => i1,pch,ch -> do 
     case xRep of 
       True  -> do 
         hput PutTerm on pch 
@@ -357,7 +342,7 @@ proc p1Get =
         hput GetTerm on i1 
         get xMv on i1 
 
-        case isRightMove (xMv,append(xs,os)) of 
+        case isRightMove (xMv,myappend(xs,os)) of 
           Left(emsg) -> do 
             hput PutTerm on pch 
             put errorMsg(1,emsg) on pch 
@@ -377,10 +362,11 @@ proc p1Get =
       False -> do 
         hput PutTerm on pch 
         put turnMsg("O") on pch 
+
         hput GetMove on ch 
         get oMv on ch
 
-        case isRightMove (oMv,append(xs,os)) of 
+        case isRightMove (oMv,myappend(xs,os)) of 
           Left(emsg) -> do 
             hput PutTerm on pch 
             put errorMsg(2,emsg) on pch 
@@ -401,7 +387,7 @@ proc p1Get =
                 hput GetTerm on i1 
                 get xMv on i1 
 
-                case isRightMove (xMv,append(xs,oMv:os)) of 
+                case isRightMove (xMv,myappend(xs,oMv:os)) of 
                   Left(emsg) -> do 
                     hput PutTerm on pch 
                     put errorMsg(1,emsg) on pch 
@@ -431,7 +417,7 @@ proc p1Init =
         put errorMsg(1,emsg) on pch 
         p1Init (| cco=> i1,pch,ch)
 
-      Right (bool)  -> do
+      Right (bool)  -> do 
         hput PutTerm on pch 
         put drawMdfdBd (empBoard,xMv,1) on pch
         p1Get ([xMv],[],newBdRep(empBoard,xMv,1),False,2|cco=> i1,pch,ch)
@@ -443,7 +429,7 @@ proc player1  =
       [] -> 
         plug
           p1Init  (| cco => i1,pch,ch)
-          playerShow  ("receive",[' '] | pch => c1)
+          playerShow  ("receive"," " | pch => c1)
       x:xs -> do 
         hput PutTerm on c1 
         put x on c1 
@@ -455,7 +441,9 @@ proc player1  =
 -- =============================PLAYER 2==============================
 
 proc player2 = 
-  | ch => i2 ->
+  | ch => i2 -> do 
+    hput PutTerm on i2 
+    put 5 on i2 
     hcase ch of
       -- P1 is asking P2 to make a move and put it on ch  
       GetMove -> do 

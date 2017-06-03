@@ -8,8 +8,7 @@ builtInFunList :: [Func]
 builtInFunList 
         = [
            Add_I,Sub_I,Mul_I,DivQ_I,DivR_I,
-           Eq_I,Neq_I,Leq_I,Geq_I,LT_I,GT_I,
-           Eq_C,Eq_S,Concat_S,Unstring_S,
+           Ceq,Neq,Leq,Geq,Lt,Gt,Unstring,
            Or_B,And_B,Append,ToStr,ToInt
           ]
           
@@ -39,26 +38,19 @@ makeSymTabThing fn@(BuiltIn func)
                   (fn,commIntFunTypes "intout")
               DivR_I ->
                   (fn,commIntFunTypes "intout")
-              Eq_I   -> 
-                  (fn,commIntFunTypes "boolout")
-              Neq_I  -> 
-                  (fn,commIntFunTypes "boolout")
-              Leq_I  -> 
-                  (fn,commIntFunTypes "boolout")
-              Geq_I  -> 
-                  (fn,commIntFunTypes "boolout")
-              LT_I   -> 
-                  (fn,commIntFunTypes "boolout")
-              GT_I   ->
-                  (fn,commIntFunTypes "boolout")
-              Eq_C   ->
-                  (fn,commCharFunTypes)
-              Eq_S   ->
-                  (fn,eqSStrFunType)
-              Concat_S   ->  
-                  (fn,concatStrFunType)
-              Unstring_S -> 
-                  (fn,commStrFunType "strout")
+              Ceq   -> 
+                  (fn,boolGenFunType)
+              Neq  -> 
+                  (fn,boolGenFunType)
+              Leq  -> 
+                  (fn,boolGenFunType)
+              Geq  -> 
+                  (fn,boolGenFunType)
+              Lt  -> 
+                  (fn,boolGenFunType)
+              Gt   ->
+                  (fn,boolGenFunType)
+
               Or_B  ->
                   (fn,commBoolFunTypes)
               And_B ->
@@ -72,6 +64,9 @@ makeSymTabThing fn@(BuiltIn func)
 
               Append ->
                   (fn,append_Type) 
+
+              Unstring ->
+                  (fn,unstr_Type) 
 
 intType :: Type 
 intType = TypeConst (BaseInt,(0,0))
@@ -94,6 +89,16 @@ varType :: Type
 varType = TypeVar ("A",(0,0))
 
 
+unstr_Type :: (FunType,NumArgs)
+unstr_Type 
+      =    ( 
+               StrFType (
+                          [],
+                          TypeFun ([stringType],listCharType,(0,0))
+                        ),
+               1
+            ) 
+
 toInt_Type :: (FunType,NumArgs) 
 toInt_Type 
       =    ( 
@@ -109,7 +114,7 @@ toStr_Type
       =    ( 
                StrFType (
                           ["A"],
-                          TypeFun ([varType],listCharType,(0,0))
+                          TypeFun ([varType],stringType,(0,0))
                          ),1
                
             ) 
@@ -121,7 +126,7 @@ append_Type
                StrFType (
                           ["A"],
                           TypeFun ([varType,varType],varType,(0,0))
-                         ),1
+                         ),2
                
             ) 
 

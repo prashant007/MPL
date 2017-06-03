@@ -638,14 +638,17 @@ get_command c posn = case c of
    C.Mul_I -> AC_MUL   (Mul (posn,"mul")) 
    C.DivQ_I  -> AC_DIVQ(Quot(posn,"quot"))
    C.DivR_I  -> AC_DIVR(Rem (posn,"rem")) 
-   C.Eq_I    -> AC_EQ  (EqI (posn,"eq"))  
-   C.Leq_I   -> AC_LEQ (LeqI(posn,"leq")) 
-   C.Eq_C    -> AC_EQC (Eqc (posn,"eqc")) 
-   C.Leq_C   -> AC_LEQC (Leqc (posn,"leqc")) 
-   C.Eq_S    -> AC_EQS  (Eqs  (posn,"eqs")) 
-   C.Leq_S   -> AC_LEQS (Leqs (posn,"leqs"))
-   C.Concat_S n    -> AC_CONCAT (ConcatS  (posn,"concatS")) (toInteger n )
-   C.Unstring_S    -> AC_UNSTRING (Unstring (posn,"unstring"))
+
+   C.Ceq     -> AC_EQ  (CEQ (posn,"eq"))
+   C.Neq     -> AC_NEQ (Neq (posn,"neq"))
+
+   C.Leq     -> AC_LEQ (Leq (posn,"leq"))
+   C.Geq     -> AC_GEQ (Geq (posn,"geq"))
+
+   C.Lt      -> AC_LT (Lt (posn,"lt"))
+   C.Gt      -> AC_GT (Gt (posn,"gt"))
+
+   C.Unstring      -> AC_UNSTRING (Unstring (posn,"unstring"))
    C.Append        -> AC_APPEND (Append (posn,"appendL"))
    C.ToStr         -> AC_TOSTR (ToStr (posn,"toStr"))
    C.ToInt         -> AC_TOINT (ToInt (posn,"toInt"))

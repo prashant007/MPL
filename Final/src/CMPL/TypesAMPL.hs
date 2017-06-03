@@ -46,11 +46,7 @@ data AMPLCOM  =
         |AMC_PRET
 
         |AMC_STRING String -- string data types start
-        |AMC_UNSTRING 
-        |AMC_EQS
-        |AMC_LEQS
-        |AMC_CONCAT
-        |AMC_CONCATf Int -- string data types end
+        |AMC_UNSTRING
         |AMC_TOSTR
         |AMC_TOINT
         |AMC_APPEND
@@ -59,17 +55,20 @@ data AMPLCOM  =
         |AMC_AND
  
         |AMC_INT Int -- Int data types start
-        |AMC_LEQ 
-        |AMC_EQ   
         |AMC_ADD
         |AMC_SUB 
         |AMC_MUL 
         |AMC_DIVQ
         |AMC_DIVR -- Int data types end
 
+        |AMC_LEQ
+        |AMC_GEQ
+        |AMC_LT 
+        |AMC_GT 
+        |AMC_EQ 
+        |AMC_NEQ 
+
         |AMC_CHAR Char -- Char data types start
-        |AMC_LEQC 
-        |AMC_EQC  -- char data types end
 
         |AMC_CONS Int Int 
         |AMC_CASE [AMPLCOMS] 
@@ -92,11 +91,57 @@ data VAL = V_CLO (AMPLCOMS,ENV)
          | V_INT Int          -- currently the only built-in type
          | V_BOOL Bool
          | V_CHAR Char 
-         | V_STRING String
+         | V_STRING String 
          | V_CONS (Int,[VAL])
          | V_REC  ([AMPLCOMS],ENV)
          | V_PROD [VAL]
-          deriving (Eq,Ord,Show,Read,Generic)
+          deriving (Show,Read,Generic)
+
+instance Eq VAL where
+  V_INT    n1 == V_INT    n2 = n1 == n2
+  V_BOOL   b1 == V_BOOL   b2 = b1 == b2
+  V_CHAR   c1 == V_CHAR   c2 = c1 == c2 
+  V_STRING s1 == V_STRING s2 = s1 == s2 
+  V_CONS   c1 == V_CONS c2 = handleEq_VCons (V_CONS c1) (V_CONS c2)
+  _         == _         = False 
+
+handleEq_VCons :: VAL -> VAL -> Bool 
+handleEq_VCons val1 val2 
+    = case (val1,val2) of 
+          (V_CONS (n1,vs1),V_CONS(n2,vs2)) -> 
+            case n1 == n2 of 
+              True -> 
+                 (and.zipWith (==) vs1) vs2
+              False -> 
+                 False
+
+
+instance Ord VAL where
+  V_INT  n1   <= V_INT  n2   = n1 <= n2
+  V_BOOL b1   <= V_BOOL b2   = b1 <= b2
+  V_CHAR c1   <= V_CHAR c2   = c1 <= c2 
+  V_STRING s1 <= V_STRING s2 = s1 <= s2
+  V_CONS c1   <= V_CONS c2 = handleLT_VCons (V_CONS c1) (V_CONS c2) 
+  _           <= _         = False 
+
+handleLT_VCons :: VAL -> VAL -> Bool 
+handleLT_VCons val1 val2 
+    = case (val1,val2) of 
+          (V_CONS(n1,xs),V_CONS(n2,ys)) ->
+            case n1 <  n2 of
+              False ->
+                 case n1 == n2 of 
+                    True ->
+                      (or.zipWith (<=) xs) ys 
+                    False ->
+                      False
+              True -> 
+                True 
+
+
+
+
+
 
 instance () => Out (VAL)
 
@@ -225,18 +270,18 @@ data COM =
  | AC_CALLf  PosnPair NamePnPair [NamePnPair]
   
  | AC_STRING   PosnPair (String,PosnPair) --String data types start
- | AC_EQS      PosnPair 
- | AC_LEQS     PosnPair 
  | AC_CONCAT   PosnPair Int  
  | AC_UNSTRING PosnPair    --String data types end 
 
  | AC_CHAR   PosnPair (Char,PosnPair)   --character data types start
- | AC_EQC    PosnPair 
- | AC_LEQC   PosnPair --character data types end 
                      
  | AC_INT   PosnPair (Int,PosnPair)    --- Int data type start    
+ | AC_GEQ   PosnPair
  | AC_LEQ   PosnPair 
  | AC_EQ    PosnPair 
+ | AC_NEQ    PosnPair
+ | AC_GT    PosnPair
+ | AC_LT    PosnPair
  | AC_ADD   PosnPair 
  | AC_SUB   PosnPair 
  | AC_MUL   PosnPair 

@@ -395,19 +395,16 @@ data Func =        Add_I
                  | Mul_I 
                  | DivQ_I
                  | DivR_I 
-                 | Eq_I
-                 | Neq_I
-                 | Leq_I
-                 | Geq_I 
-                 | LT_I
-                 | GT_I
-                 | Eq_C
-                 | Eq_S
-                 | Concat_S  
-                 | Unstring_S
+                 | Ceq
+                 | Neq
+                 | Leq
+                 | Geq 
+                 | Lt 
+                 | Gt 
                  | ToStr
                  | ToInt
                  | Append
+                 | Unstring 
                  | Or_B
                  | And_B
                  deriving  (Eq,Show,Read,Generic)
