@@ -6,7 +6,7 @@ import CMPL.AMPLParserMeta
 import Data.Char
 
 
--- the top-level printing method
+--- the top-level printing method
 printTree :: Print a => a -> String
 printTree = render . prt 0
 
@@ -113,6 +113,24 @@ instance Print ToStr where
 instance Print ToInt where
   prt _ (ToInt (_,i)) = doc (showString ( i))
 
+<<<<<<< HEAD
+=======
+
+instance Print And where
+  prt _ (And (_,i)) = doc (showString ( i))
+
+
+instance Print Or where
+  prt _ (Or (_,i)) = doc (showString ( i))
+
+
+instance Print Append where
+  prt _ (Append (_,i)) = doc (showString ( i))
+
+
+instance Print Unstring where
+  prt _ (Unstring (_,i)) = doc (showString ( i))
+>>>>>>> Experiment
 
 instance Print And where
   prt _ (And (_,i)) = doc (showString ( i))
@@ -384,6 +402,11 @@ instance Print COM where
     AC_STRING conststring str -> prPrec i 0 (concatD [prt 0 conststring, prt 0 str])
     AC_TOSTR tostr -> prPrec i 0 (concatD [prt 0 tostr])
     AC_TOINT toint -> prPrec i 0 (concatD [prt 0 toint])
+<<<<<<< HEAD
+=======
+    AC_AND and -> prPrec i 0 (concatD [prt 0 and])
+    AC_OR or -> prPrec i 0 (concatD [prt 0 or])
+>>>>>>> Experiment
     AC_APPEND append -> prPrec i 0 (concatD [prt 0 append])
     AC_UNSTRING unstring -> prPrec i 0 (concatD [prt 0 unstring])
     AC_LEQ leq -> prPrec i 0 (concatD [prt 0 leq])

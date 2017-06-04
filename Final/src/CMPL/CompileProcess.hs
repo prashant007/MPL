@@ -3,7 +3,7 @@ module CMPL.CompileProcess(compile_process,compile_common) where
 import CMPL.TypesAMPL
 import CMPL.SymbolTable
 
-import qualified Data.List as List 
+import  Data.List as List 
 import qualified  Data.Map as M 
 import qualified Data.List.Split as DLS 
 import qualified Data.Set as Set 
@@ -11,9 +11,9 @@ import Control.Monad.Trans.State.Lazy
 
 commsStr_fun :: [String]
 commsStr_fun = [
-                 "AC_STOREf,AC_LOADf,AC_RET,AC_CALLf,AC_INT,AC_MUL,AC_ADD,AC_SUB,AC_DIVQ,AC_DIVR", 
-                 "AC_CHAR,AC_LEQ,AC_GEQ,AC_EQ,AC_NEQ,AC_LT,AC_GT,AC_OR,AC_AND,AC_APPEND",
-                 "AC_STRUCT,AC_CASEf","AC_RECORDf","AC_STRING","AC_UNSTRING"
+                 "AC_STOREf,AC_LOADf,AC_RET,AC_CALLf,AC_INT,AC_LEQ,AC_EQ,AC_MUL,AC_ADD,AC_SUB", 
+                 "AC_DIVQ,AC_DIVR,AC_CHAR,AC_LEQC,AC_EQC,AC_STRING,AC_EQS,AC_LEQS,AC_CONCAT",
+                 "AC_CONCATf,AC_STRUCT,AC_CASEf","AC_RECORDf","AC_TOSTR","AC_TOINT"
                ] 
            
 commsList :: [String]
@@ -124,6 +124,14 @@ compile_common pcoms@(cf:rest)  = do
          AC_UNSTRING un_posn -> do
             rest' <- compile_common rest
             return $ AMC_UNSTRING : rest'
+
+         AC_TOSTR un_posn     -> do 
+           rest' <- compile_common rest
+           return $ AMC_TOSTR:rest'
+
+         AC_TOINT un_posn     -> do 
+           rest' <- compile_common rest
+           return $ AMC_TOINT:rest'
 
          AC_STRUCT (s1posn,s2posn) vars_posns      -> do 
             helper_STRUCT (s1posn,s2posn) vars_posns rest  
@@ -430,6 +438,7 @@ compile_process pcoms@(cf:rest) = do
                     let cns = map (\x -> fst (lookup_trans_posn trans x gerror)
                                   ) ch_pns 
                     rest' <- compile_process rest
+                    --modify (\(rsym,st,t,g) -> (sym,stack,trans,g))
                     return $ AMC_HALT cns : rest'
 
                 AC_HCASEf _ ch_pn labcoms       -> do
@@ -437,6 +446,7 @@ compile_process pcoms@(cf:rest) = do
                    comlist <- helper_hcase pol labcoms  
                    modify $ \(sy,st,tr,gi) -> (sym,stack,trans,ginf) -- don't need this. Think carefully and check
                    rest'   <- compile_process rest
+                   --modify (\(rsym,st,t,g) -> (sym,stack,trans,g))
                    return $ (AMC_HCASE cn comlist):rest'
 
                 AC_PLUGf _ ch_pn_list (chns_posns_1,cs1) (chns_posns_2,cs2) -> do
@@ -444,6 +454,7 @@ compile_process pcoms@(cf:rest) = do
                     rest1' <- compile_process cs1
                     modify $ \(sym,st,trans,ginf) -> (sym,stack,trans2,ginf)
                     rest2' <- compile_process cs2
+                    --modify (\(rsym,st,t,g) -> (sym,stack,trans,g))
                     return $ (AMC_PLUG ch_list (chs1,rest1') (chs2,rest2')):[] 
                  where
                       len'     = length ch_pn_list
@@ -462,11 +473,13 @@ compile_process pcoms@(cf:rest) = do
                         newtrans = 
                             helper_RUNf_proc (pnpr,gerror) in_chs out_chs 
                                              (pname,posn) vars sym trans 
+                    modify (\(rsym,st,t,g) -> (sym,stack,trans,g))
                     return $ larg ++[(AMC_RUN newtrans pname (length vars))]
 
                 AC_SPLITf pnpr ch_pn ((ch1,pn1),(ch2,pn2))           -> do
                     modify (\(sym,stack,trans,ginf) -> (sym,stack,trans',ginf)) 
                     rest' <- compile_process rest
+                    modify (\(rsym,st,t,g) -> (rsym,stack,trans,g))
                     return $ AMC_SPLIT ch' (ch1',ch2'): rest' 
                  where 
                    (ch',pol) = lookup_trans_posn trans ch_pn gerror         
@@ -485,6 +498,7 @@ compile_process pcoms@(cf:rest) = do
                     cs2'  <- compile_process cs2
                     modify (\(sy,st,tr,ginf)-> (sym,stack,trans,ginf))
                     rest' <- compile_process rest  
+                    --modify (\(rsym,st,t,g) -> (sym,stack,trans,g))                    
                     return $ AMC_FORK ch ((ch1,chs1,cs1'),(ch2,chs2,cs2')) : rest' 
                  where 
                    (ch,pol)    = lookup_trans_posn trans ch_pn gerror
@@ -505,6 +519,18 @@ compile_process pcoms@(cf:rest) = do
 
                 str -> error $ "Error in following.\n" ++ show str ++ "\n" ++ show pcoms
 
+
+isBuiltIn :: CHANNEL -> Bool 
+isBuiltIn (terminal,_) 
+  = elem (init terminal) ("intTerm","charTerm") 
+
+
+next_channel_list :: TRANSLATION -> Int -> [Int]
+next_channel_list  trans len = take len [(last+1)..]
+                   where 
+                    trans_chans = (sort.map (\(x,y,z) -> z)) trans
+                    len_trans   = length trans_chans
+                    last        = trans_chans !! (len_trans-1)
 
 --------------------------------------------------------------------------------
 -- Helper Function for AC_HPUTf

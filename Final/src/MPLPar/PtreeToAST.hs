@@ -820,7 +820,11 @@ fromStrToType (posn,str)
         | str == "Int"    = M.TypeConst (M.BaseInt,posn)
         | str == "Double" = M.TypeConst (M.BaseDouble,posn)
         | str == "Char"   = M.TypeConst (M.BaseChar,posn)
+<<<<<<< HEAD
         | str == "String" = M.TypeConst (M.BaseString,posn)
+=======
+        | str == "String" =  M.TypeConst (M.BaseString,posn)
+>>>>>>> Experiment
         | otherwise       = M.TypeVar (str,posn)
        
 

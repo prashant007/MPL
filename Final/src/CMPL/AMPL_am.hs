@@ -684,12 +684,22 @@ seq_step ((AMC_UNSTRING):c,e,V_STRING str:s)
 seq_step (AMC_APPEND:c,e,list2:list1:s)  =
                       return (c,e,(append_Help list1 list2):s)
 ------------------------------------------------------------------------------
+seq_step (AMC_DIVQ:c,e,V_INT n:V_INT m:s)  = return (c,e,V_INT (quot m n):s)
+------------------------------------------------------------------------------
+seq_step (AMC_DIVR:c,e,V_INT n:V_INT m:s)  = return (c,e,V_INT (m `mod` n):s)
+------------------------------------------------------------------------------
+seq_step (AMC_ADD:c,e,V_INT n:V_INT m:s)   = return (c,e,V_INT (m + n):s)
+------------------------------------------------------------------------------
+seq_step (AMC_SUB:c,e,V_INT n:V_INT m:s)   = return (c,e,V_INT (m - n):s)
+------------------------------------------------------------------------------
+seq_step (AMC_MUL:c,e,V_INT n:V_INT m:s)   = return (c,e,V_INT (m * n):s)
+------------------------------------------------------------------------------
 seq_step (AMC_TOSTR:c,e,val:s)  =
           case val of 
             V_CHAR char ->
-              return ((AMC_STRING [char]):c,e,s)  
+              return (c,e,(V_STRING [char]):s)  
             V_INT  int  ->    
-              return ((AMC_STRING (show int)):c,e,s)
+              return (c,e,(V_STRING (show int)):s)
 -----------------------------------------------------------------------------
 seq_step (AMC_TOINT:c,e,val:s)  =
           case val of 
@@ -713,8 +723,8 @@ seq_step (AMC_SUB:c,e,V_INT n:V_INT m:s)   = return (c,e,V_INT (m - n):s)
 ------------------------------------------------------------------------------
 seq_step (AMC_MUL:c,e,V_INT n:V_INT m:s)   = return (c,e,V_INT (m * n):s)
 ------------------------------------------------------------------------------
-seq_step (AMC_LEQ:c,e,v2:v1:s) 
-                         | v1 <= v2   = return (c,e,V_CONS(2,[]):s)
+seq_step (AMC_LEQ:c,e,V_INT n:V_INT m:s) 
+                         | m <= n     = return (c,e,V_CONS(2,[]):s)
                          | otherwise = return (c,e,V_CONS(1,[]):s)
 ------------------------------------------------------------------------------
 seq_step (AMC_EQ:c,e,v2:v1:s) 
