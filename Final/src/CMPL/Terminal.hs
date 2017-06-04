@@ -15,11 +15,21 @@ equalS = replicate 80 '='
 stars  = replicate 70 '*'
 
 
-validNumber :: String -> Either String VAL   
+checkNum :: String -> Either String VAL
+checkNum (v:vs)
+    = case v of 
+         '-' -> case validNumber vs of 
+                  Right _   -> return $ V_INT (read (v:vs)::Int)
+                  Left emsg -> Left emsg  
+         _   -> case validNumber (v:vs) of
+                  Right _   -> return $ V_INT (read (v:vs)::Int)
+                  Left emsg -> Left emsg            
+
+validNumber :: String -> Either String Bool   
 validNumber strVal 
     = case (and.map isDigit) strVal of 
         True  ->
-          return (V_INT (read strVal ::Int))
+          return True
 
         False -> 
           Left $ strVal ++ " is not a valid number.Try again."
@@ -33,7 +43,7 @@ handle_GET n handle = do
           strVal <- liftIO $ hGetLine handle
           liftIO $ putStrLn $ "Number " ++ strVal ++ " entered on channel " 
                               ++ show n  ++ "\n" ++ stars
-          case validNumber strVal of 
+          case checkNum strVal of 
             Left emsg -> do 
                 liftIO $ hPutStrLn handle emsg 
                 handle_GET n handle

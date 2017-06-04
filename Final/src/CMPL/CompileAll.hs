@@ -52,27 +52,7 @@ compile_run (posn,Channel_specf in_chs_posn out_chs_posn,coms) = do
          trans = l1 ++ l2 
          trans' = map (\(_,p,x) -> (x,p,x)) trans
      return $ (trans',code) 
-   
-compile_run (posn,Channel_spec in_chs_posns out_chs_posns,coms) = do
-   sym <- get
-   let code   = evalState (compile_process coms) (sym,[],[],("main_run",("main_run",posn)))
-   return $ (trans,code) 
-     where 
-       trans = ( map  (\(x,posnx) -> if x <= 0
-                                        then (x,IN, x)
-                                        else 
-                                          error $ genLnNoError posnx ++ 
-                                                 "Services on positive channels not provided."
-                      ) in_chs_posns
-               ) 
-               ++
-               ( map (\(x,posnx) -> if x <= 0
-                                       then (x,OUT, x)
-                                       else 
-                                        error $ genLnNoError posnx ++ 
-                                                "Services on positive channels not provided."
-                     ) out_chs_posns
-               )
+
 
 ------------------------------------------------------------------------------------------------------
 --

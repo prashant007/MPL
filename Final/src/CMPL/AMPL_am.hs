@@ -676,7 +676,7 @@ seq_step ((AMC_INT k):c,e,s)       = return (c,e,(V_INT k): s)
 ------------------------------------------------------------------------------
 seq_step ((AMC_CHAR chr):c,e,s)    = return (c,e,(V_CHAR chr): s)
 ------------------------------------------------------------------------------
-seq_step ((AMC_STRING str):c,e,s)  = return (c,e,(unstring_Help list): s)
+seq_step ((AMC_STRING str):c,e,s)  = return (c,e,(V_STRING str): s)
 ------------------------------------------------------------------------------
 seq_step ((AMC_CONCAT):c,e,V_STRING str1:V_STRING str2:s) = return (c,e,V_STRING (str2 ++ str1): s)
 ------------------------------------------------------------------------------
@@ -693,25 +693,6 @@ seq_step (AMC_UNSTRING:c,e,(V_STRING list):s)  =
 seq_step (AMC_APPEND:c,e,list1:list2:s)  =
                       return (c,e,(append_Help list1 list2):s)
 ------------------------------------------------------------------------------
-seq_step (AMC_TOSTR:c,e,val:s)  =
-          case val of 
-            V_CHAR char ->
-              return ((AMC_STRING [char]):c,e,s)  
-            V_INT  int  ->    
-              return ((AMC_STRING (show int)):c,e,s)
------------------------------------------------------------------------------
-seq_step (AMC_TOINT:c,e,val:s)  =
-          case val of 
-            V_CHAR char ->
-              case elem char "1234567890" of 
-                True -> 
-                   return (c,e,(V_INT (read [char]::Int)):s)  
-                False ->
-                   error $ stars ++ "Can't convert <<" ++ char:[] 
-                           ++ ">> to integer" ++ stars
-            V_CONS _  ->    
-              return (c,e,(string_help val):s)
------------------------------------------------------------------------------
 seq_step (AMC_DIVQ:c,e,V_INT n:V_INT m:s)  = return (c,e,V_INT (quot m n):s)
 ------------------------------------------------------------------------------
 seq_step (AMC_DIVR:c,e,V_INT n:V_INT m:s)  = return (c,e,V_INT (m `mod` n):s)
@@ -722,6 +703,26 @@ seq_step (AMC_SUB:c,e,V_INT n:V_INT m:s)   = return (c,e,V_INT (m - n):s)
 ------------------------------------------------------------------------------
 seq_step (AMC_MUL:c,e,V_INT n:V_INT m:s)   = return (c,e,V_INT (m * n):s)
 ------------------------------------------------------------------------------
+seq_step (AMC_TOSTR:c,e,val:s)  =
+          case val of 
+            V_CHAR char ->
+              return (c,e,(V_STRING [char]):s)  
+            V_INT  int  ->    
+              return (c,e,(V_STRING (show int)):s)
+-----------------------------------------------------------------------------
+seq_step (AMC_TOINT:c,e,val:s)  =
+          case val of 
+            V_CHAR char ->
+              case elem char "1234567890" of 
+                True -> 
+                   return (c,e,(V_INT (read [char]::Int)):s)  
+                False ->
+                   error $ stars ++ "Can't convert <<" ++ char:[] 
+                           ++ ">> to integer" ++ stars
+            V_STRING v  ->    
+              return (c,e,(V_INT(read v::Int)):s)
+-----------------------------------------------------------------------------
+
 seq_step (AMC_LEQ:c,e,V_INT n:V_INT m:s) 
                          | m <= n     = return (c,e,V_CONS(2,[]):s)
                          | otherwise = return (c,e,V_CONS(1,[]):s)

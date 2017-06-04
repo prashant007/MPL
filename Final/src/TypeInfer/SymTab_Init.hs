@@ -109,7 +109,7 @@ toStr_Type
       =    ( 
                StrFType (
                           ["A"],
-                          TypeFun ([varType],listCharType,(0,0))
+                          TypeFun ([varType],stringType,(0,0))
                          ),1
                
             ) 

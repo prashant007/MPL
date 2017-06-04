@@ -270,17 +270,7 @@ next_channel_num m ((_,_,n):rest)
             | m <= n    = next_channel_num (n+1) rest
             | otherwise = next_channel_num m rest
 --------------------------------------------------------------------------------
-next_channel_list :: TRANSLATION -> Int -> [Int]
-next_channel_list  trans len = diff ++ rem_elem
-                   where 
-                    trans_chans = (sort.map (\(x,y,z) -> z)) trans
-                    len_trans   = length trans_chans
-                    first       = trans_chans !! 0 
-                    last        = trans_chans !! (len_trans-1)
-                    olist       = [first..last]
-                    diff        = olist \\ trans_chans
-                    rem_len     = len - length diff
-                    rem_elem    =  take rem_len [(last+1)..]
+
 
 
 

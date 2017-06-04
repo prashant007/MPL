@@ -7,7 +7,7 @@ import CMPL.AMPLParserMeta
 import Data.Char
 
 
--- the top-level printing method
+--- the top-level printing method
 printTree :: Print a => a -> String
 printTree = render . prt 0
 
@@ -105,6 +105,26 @@ instance Print ConstChar where
 
 instance Print ConstString where
   prt _ (ConstString (_,i)) = doc (showString ( i))
+
+
+instance Print ToStr where
+  prt _ (ToStr (_,i)) = doc (showString ( i))
+
+
+instance Print ToInt where
+  prt _ (ToInt (_,i)) = doc (showString ( i))
+
+
+instance Print And where
+  prt _ (And (_,i)) = doc (showString ( i))
+
+
+instance Print Or where
+  prt _ (Or (_,i)) = doc (showString ( i))
+
+
+instance Print Append where
+  prt _ (Append (_,i)) = doc (showString ( i))
 
 
 instance Print Unstring where
@@ -367,6 +387,11 @@ instance Print COM where
     AC_INT constint cinteger -> prPrec i 0 (concatD [prt 0 constint, prt 0 cinteger])
     AC_CHAR constchar character -> prPrec i 0 (concatD [prt 0 constchar, prt 0 character])
     AC_STRING conststring str -> prPrec i 0 (concatD [prt 0 conststring, prt 0 str])
+    AC_TOSTR tostr -> prPrec i 0 (concatD [prt 0 tostr])
+    AC_TOINT toint -> prPrec i 0 (concatD [prt 0 toint])
+    AC_AND and -> prPrec i 0 (concatD [prt 0 and])
+    AC_OR or -> prPrec i 0 (concatD [prt 0 or])
+    AC_APPEND append -> prPrec i 0 (concatD [prt 0 append])
     AC_UNSTRING unstring -> prPrec i 0 (concatD [prt 0 unstring])
     AC_LEQ leqi -> prPrec i 0 (concatD [prt 0 leqi])
     AC_EQ eqi -> prPrec i 0 (concatD [prt 0 eqi])

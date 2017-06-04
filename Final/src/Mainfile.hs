@@ -134,7 +134,7 @@ main = do
                             astAMPL   = SA.transAMPLCODE ptreeAMPL
                           
                             mach      = CALL.compile_all astAMPL
-                          --putStrLn $ prettyStyle zigStyle cMPL_AST
+                          putStrLn $ prettyStyle zigStyle astAMPL
                           putStrLn ampl_prog
                           ans <- evalStateT (AM.run_cm' mach) (Map.empty)
                           let ans' = prettyStyle zigStyle ans 
