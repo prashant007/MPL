@@ -1,13 +1,12 @@
 {-# LANGUAGE DeriveGeneric #-}
-module CMPL.TypesAMPL where
+module AMPL.TypesAMPL where
 
 import Text.PrettyPrint.GenericPretty
 import Text.PrettyPrint
 
 import qualified  Data.Map as M
 
-import Control.Concurrent.MVar
-import Control.Concurrent.STM.TChan
+
 import Network
 import GHC.IO.Handle
 

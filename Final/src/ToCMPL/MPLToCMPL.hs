@@ -2,8 +2,7 @@ module ToCMPL.MPLToCMPL where
 import qualified CMPL.TypesCoreMPL as C
 import qualified TypeInfer.MPL_AST as M 
 import qualified TypeInfer.Gen_Eqns_CommFuns as Comm 
-import qualified CMPL.TypesAMPL as A 
-
+import qualified AMPL.TypesAMPL as A 
 import Control.Monad.State
 import Data.List 
 

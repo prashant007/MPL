@@ -1,14 +1,14 @@
-module CMPL.Terminal where
+module AMPL.Terminal where
 
 import System.IO
 
-import System.Console.ANSI
+
 import Data.Char 
 
 import Control.Monad
 import Control.Monad.Trans.State.Lazy
 import Control.Monad.IO.Class
-import CMPL.TypesAMPL
+import AMPL.TypesAMPL
 
 
 equalS = replicate 80 '='

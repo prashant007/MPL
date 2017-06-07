@@ -6,7 +6,6 @@ import TypeInfer.MPL_AST
 import Control.Monad.State.Lazy
 import Control.Monad.Trans.Either
 import Data.List 
-import System.Console.ANSI
 
 equalS :: String
 equalS = replicate 80 '='
@@ -664,7 +663,7 @@ isProtData defn = case defn of
 
 putStrLnRed :: String -> IO ()
 putStrLnRed str = do 
-  setSGR [SetColor Foreground Vivid Red]
+  --setSGR [SetColor Foreground Vivid Red]
   putStrLn str 
 
 -- ======================================================================================

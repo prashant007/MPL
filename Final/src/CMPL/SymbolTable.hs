@@ -1,6 +1,6 @@
 module CMPL.SymbolTable where
 
-import CMPL.TypesAMPL
+import AMPL.TypesAMPL
 
 import Data.List
 import qualified  Data.Map as M 

@@ -1,7 +1,7 @@
-module CMPL.STConverter_AMPL where
+module AMPL.STConverter_AMPL where
 
-import qualified  CMPL.TypesAMPL as T
-import CMPL.AMPLParserMeta
+import qualified  AMPL.TypesAMPL as T
+import AMPL.AbsAMPL
 import Data.Char
 
 transPIdent :: PIdent -> T.NamePnPair

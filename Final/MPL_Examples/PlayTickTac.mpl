@@ -69,7 +69,7 @@ fun elem :: Int,[Int] -> Bool =
 -- ============FUNCTIONS FOR BOARD REPRESENTATION========================= 
 
 {-
-check if a move is a vlaid and a new move
+check if a move is a valid and a new move
 -}
 
 fun isRightMove :: Int,[Int] -> Either (String,Bool) =
@@ -405,18 +405,18 @@ proc p1Get =
                   Left(emsg) -> do 
                     hput PutTerm on pch 
                     put errorMsg(1,emsg) on pch 
-                    p1Get (xs,oMv:os,newBdRep(bd,oMv,0),True,ct|cco=> i1,pch,ch)
+                    p1Get (xs,oMv:os,newBdRep(bd,oMv,0),True,ct+1|cco=> i1,pch,ch)
 
                   Right(bool) -> do 
                     hput PutTerm on pch 
                     put drawFnBd (bd,oMv,xMv) on pch
-                    case getStatus (xMv:xs,ct+1) of 
+                    case getStatus (xMv:xs,ct+2) of 
                       Draw -> 
                         closeP1 (False,"X"  |cco => i1,pch,ch)
                       Win  ->
                         closeP1 (True ,"X" |cco => i1,pch,ch)
                       Cont ->
-                        p1Get(xMv:xs,oMv:os,finBdRep(bd,oMv,xMv),xRep,ct+1|cco=> i1,pch,ch)
+                        p1Get(xMv:xs,oMv:os,finBdRep(bd,oMv,xMv),xRep,ct+2|cco=> i1,pch,ch)
 
 
 
@@ -434,7 +434,7 @@ proc p1Init =
       Right (bool)  -> do
         hput PutTerm on pch 
         put drawMdfdBd (empBoard,xMv,1) on pch
-        p1Get ([xMv],[],newBdRep(empBoard,xMv,1),False,2|cco=> i1,pch,ch)
+        p1Get ([xMv],[],newBdRep(empBoard,xMv,1),False,1|cco=> i1,pch,ch)
 
 
 proc player1  = 

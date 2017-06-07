@@ -1,6 +1,6 @@
 module CMPL.CompileAll (compile_all) where
 
-import CMPL.TypesAMPL
+import AMPL.TypesAMPL
 import CMPL.CompileProcess
 import CMPL.SymbolTable 
 

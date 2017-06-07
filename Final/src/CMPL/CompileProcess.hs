@@ -1,6 +1,6 @@
 module CMPL.CompileProcess(compile_process,compile_common) where 
     
-import CMPL.TypesAMPL
+import AMPL.TypesAMPL
 import CMPL.SymbolTable
 
 import  Data.List as List 

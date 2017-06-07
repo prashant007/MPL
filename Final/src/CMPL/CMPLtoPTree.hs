@@ -1,11 +1,8 @@
 module CMPL.CMPLtoPTree where 
 
 import qualified CMPL.TypesCoreMPL as C 
-import qualified CMPL.TypesAMPL as A 
-import CMPL.AMPLParserMeta
-
-import Language.LBNF.Runtime
-import Language.LBNF.Compiletime
+import qualified AMPL.TypesAMPL as A 
+import AMPL.AbsAMPL
 
 import Control.Monad.State.Lazy 
 import qualified Data.Map as M 
@@ -247,16 +244,7 @@ convTerm t  =
         C.TError emsg -> 
                       return $ [AC_EMSG emsg]  
                              
-{-
-                          (fstrs_posn,coms) <- convTCall_Custom terms ([],[]) 
-                          return $ coms ++ [
-                                             AC_CALLf (Call (snd nmposn,"call")) 
-                                                      (convPIdent nmposn)
-                                                      (map convPIdent fstrs_posn)
-                                          
 
-
--}
 
 -------------------------------------------------------------------------
 -------------------------------------------------------------------------

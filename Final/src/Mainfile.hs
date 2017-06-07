@@ -19,14 +19,11 @@ import ToCMPL.PatternCompiler
 import ToCMPL.LambdaLift
 
 import qualified CMPL.CMPLtoPTree as CP 
-import qualified CMPL.STConverter_AMPL as SA 
-import qualified CMPL.PrintAMPL as PA 
 import qualified CMPL.CompileAll as CALL
-import qualified CMPL.AMPL_am as AM 
 
-
-
-
+import qualified AMPL.STConverter_AMPL as SA 
+import qualified AMPL.PrintAMPL as PA 
+import qualified AMPL.AMPL_am as AM 
 
 import System.Environment
 import Control.Monad.Trans.State.Lazy
@@ -177,85 +174,3 @@ getChoice  = do
             getChoice  
 
 
-
---extractTerm :: Defn -> Term 
-extractTerm (FunctionDefn (_,_,pt:[],_) ) = sthg 
-     where
-      Left sthg = (snd.fst) pt 
-
-testSthg_s :: TypeInfer.MPL_AST.Stmt -> IO ()
-testSthg_s stmt = do 
-    let 
-      defn = getDefnFromstmt stmt 
-      var1 = lam_lift_sel defn 
-      var2 = prettyStyle zigStyle (head var1) 
-    putStrLn var2
-
-getDefnFromstmt :: TypeInfer.MPL_AST.Stmt -> TypeInfer.MPL_AST.Defn 
-getDefnFromstmt (DefnStmt (ds,_,_)) = head ds 
-
-
-output = getfreeVarsDefn funDefn
-
-funDefn =
- FunctionDefn (Custom "rev_help",
-                          StrFType (["A"],
-                                    TypeFun ([TypeDataType ("List",
-                                                            [TypeVar ("A",
-                                                                      (46,
-                                                                       26))],
-                                                            (46,
-                                                             26)),
-                                              TypeDataType ("List",
-                                                            [TypeVar ("A",
-                                                                      (46,
-                                                                       30))],
-                                                            (46,
-                                                             30))],
-                                             TypeDataType ("List",
-                                                           [TypeVar ("A",
-                                                                     (46,
-                                                                      37))],
-                                                           (46,
-                                                            37)),
-                                             (46,
-                                              9))),
-                          [(([ConsPattern ("Nil",
-                                           [],
-                                           (47,
-                                            13)),
-                              VarPattern ("rList",
-                                          (47,
-                                           20))],
-                             Left (TVar ("rList",
-                                        (47, 29)))),
-                            (47, 13)),
-                           (([ConsPattern ("Cons",
-                                           [VarPattern ("x",
-                                                        (48,
-                                                         14)),
-                                            VarPattern ("xs",
-                                                        (48,
-                                                         16))],
-                                           (48,
-                                            14)),
-                              VarPattern ("rList",
-                                          (48,
-                                           20))],
-                             Left (TCallFun (Custom "rev_help",
-                                            [TVar ("xs",
-                                                   (48,
-                                                    38)),
-                                             TCons ("Cons",
-                                                    [TVar ("x",
-                                                           (48,
-                                                            41)),
-                                                     TVar ("rList",
-                                                           (48,
-                                                            43))],
-                                                    (48,
-                                                     41))],
-                                            (48,
-                                             29)))),
-                            (48, 14))],
-                          (46, 9))

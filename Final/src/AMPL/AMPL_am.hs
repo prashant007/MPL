@@ -1,12 +1,11 @@
-module  CMPL.AMPL_am where
-import  CMPL.TypesAMPL
-import  CMPL.Terminal
+module  AMPL.AMPL_am where
+import  AMPL.TypesAMPL
+import  AMPL.Terminal
 
 import System.Process 
 import Control.Concurrent
 
 import Control.Monad.IO.Class
-import System.Console.ANSI
 import Network as N 
 import Network.Socket
 import System.IO
@@ -368,7 +367,6 @@ find_service (names,(n,Q_EMPTY,Q_HPUT 3 q):chs)
       return ([],(names,(n,Q_CLOSE,q):chs))
 -------------------------------------------------------------------------------------
 find_service (names,(n,Q_HPUT 1 (Q_GET (s,t,e,c)),Q_EMPTY):chs)  = do
-    liftIO $ hSetSGR stdout  [(SetConsoleIntensity BoldIntensity),(SetColor Foreground Vivid Blue)]
     mvar <- get 
     let mapping = M.lookup n mvar
     case mapping of
@@ -411,7 +409,6 @@ find_service (names,(n,Q_HPUT 1 (Q_GET (s,t,e,c)),Q_EMPTY):chs)  = do
 
 ---------------------------------------------------------------------------------
 find_service (names,(n,Q_HPUT 2 (Q_PUT m  q),Q_EMPTY):chs)   = do 
-    liftIO $ hSetSGR stdout  [(SetConsoleIntensity BoldIntensity),(SetColor Foreground Vivid Blue)]
     mvar <- get 
     let mapping = M.lookup n mvar
     case mapping of
@@ -462,7 +459,7 @@ find_service (names,(n,Q_HPUT 3 q, Q_EMPTY):chs)  = do
          Just (port,socket,mayHand) -> do
            case mayHand of 
               Just handle -> do 
-                 liftIO $ threadDelay 100000
+                 liftIO $ threadDelay 300000
                  liftIO $ hClose handle
                  put delmvar
                  return ([],(names,(n,q,Q_HALT):chs))

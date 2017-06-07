@@ -2,7 +2,7 @@
 module CMPL.TypesCoreMPL where 
 import Text.PrettyPrint.GenericPretty
 import Text.PrettyPrint
-import CMPL.TypesAMPL
+import AMPL.TypesAMPL
 
 
 

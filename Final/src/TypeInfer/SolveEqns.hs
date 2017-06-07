@@ -111,25 +111,6 @@ solve_Quant (uvars,evars) eithList = do
                                              Right upack@(rFreeVars,rUVars,rEVars,rSubstList) -> do
                                                  modify $ \l -> printLog packList upack intLog
                                                  return upack
-                                                 {-
-                                                 case rUVars == [] of 
-                                                     True  -> do 
-                                                         let 
-                                                           finPackage 
-                                                               = (rFreeVars,rUVars,rEVars,rSubstList)
-                                                         modify $ \l -> printLog packList finPackage intLog      
-                                                         return finPackage
-                                                     False -> do 
-                                                         let 
-                                                           mayfinPackage = handle_UVars upack
-                                                         case mayfinPackage of 
-                                                             Left emsg ->
-                                                                 left emsg
-                                                             Right finPackage -> do    
-                                                                 modify $ \l -> printLog packList finPackage intLog                                       
-                                                                 return finPackage
-                                                  -}               
-
 
                                  
 
