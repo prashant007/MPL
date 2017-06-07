@@ -1,0 +1,74 @@
+Configuring GenericPretty-1.2.1...
+Building GenericPretty-1.2.1...
+Preprocessing library GenericPretty-1.2.1...
+[1 of 1] Compiling Text.PrettyPrint.GenericPretty ( Text/PrettyPrint/GenericPretty.hs, dist/dist-sandbox-745e76b6/build/Text/PrettyPrint/GenericPretty.o )
+
+Text/PrettyPrint/GenericPretty.hs:133:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:142:15: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:143:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:144:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:145:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:147:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:164:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:165:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:166:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:167:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:168:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:178:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:196:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:226:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:251:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:366:3: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:409:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:410:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:411:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:412:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:417:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:418:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:419:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:420:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:422:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:423:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:424:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:425:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:431:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:440:48: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:445:1: Warning: Tab character
+
+Text/PrettyPrint/GenericPretty.hs:452:1: Warning: Tab character
+In-place registering GenericPretty-1.2.1...
+Creating package registration file:
+/tmp/pkgConf-GenericPretty-1.26281750111656478042.1
+Installing library in
+/home/prashant/Dropbox/MPL_June/MPL/Final/.cabal-sandbox/lib/x86_64-linux-ghc-7.10.3/GenericPretty-1.2.1-KdOq5qgnBES4fQvQfNNPze
+Registering GenericPretty-1.2.1...

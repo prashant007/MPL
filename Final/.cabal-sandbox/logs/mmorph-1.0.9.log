@@ -1,0 +1,55 @@
+Configuring mmorph-1.0.9...
+Building mmorph-1.0.9...
+Preprocessing library mmorph-1.0.9...
+[1 of 2] Compiling Control.Monad.Morph ( src/Control/Monad/Morph.hs, dist/dist-sandbox-745e76b6/build/Control/Monad/Morph.o )
+
+src/Control/Monad/Morph.hs:76:1: Warning:
+    Module ‘Control.Monad.Trans.Error’ is deprecated:
+      Use Control.Monad.Trans.Except instead
+
+src/Control/Monad/Morph.hs:112:20: Warning:
+    In the use of type constructor or class ‘E.ErrorT’
+    (imported from Control.Monad.Trans.Error):
+    Deprecated: "Use Control.Monad.Trans.Except instead"
+
+src/Control/Monad/Morph.hs:113:19: Warning:
+    In the use of data constructor ‘E.ErrorT’
+    (imported from Control.Monad.Trans.Error):
+    Deprecated: "Use Control.Monad.Trans.Except instead"
+
+src/Control/Monad/Morph.hs:113:34: Warning:
+    In the use of ‘E.runErrorT’
+    (imported from Control.Monad.Trans.Error):
+    Deprecated: "Use Control.Monad.Trans.Except instead"
+
+src/Control/Monad/Morph.hs:233:11: Warning:
+    In the use of type constructor or class ‘E.Error’
+    (imported from Control.Monad.Trans.Error):
+    Deprecated: "Use Control.Monad.Trans.Except instead"
+
+src/Control/Monad/Morph.hs:233:33: Warning:
+    In the use of type constructor or class ‘E.ErrorT’
+    (imported from Control.Monad.Trans.Error):
+    Deprecated: "Use Control.Monad.Trans.Except instead"
+
+src/Control/Monad/Morph.hs:234:17: Warning:
+    In the use of data constructor ‘E.ErrorT’
+    (imported from Control.Monad.Trans.Error):
+    Deprecated: "Use Control.Monad.Trans.Except instead"
+
+src/Control/Monad/Morph.hs:235:14: Warning:
+    In the use of ‘E.runErrorT’
+    (imported from Control.Monad.Trans.Error):
+    Deprecated: "Use Control.Monad.Trans.Except instead"
+
+src/Control/Monad/Morph.hs:235:30: Warning:
+    In the use of ‘E.runErrorT’
+    (imported from Control.Monad.Trans.Error):
+    Deprecated: "Use Control.Monad.Trans.Except instead"
+[2 of 2] Compiling Control.Monad.Trans.Compose ( src/Control/Monad/Trans/Compose.hs, dist/dist-sandbox-745e76b6/build/Control/Monad/Trans/Compose.o )
+In-place registering mmorph-1.0.9...
+Creating package registration file:
+/tmp/pkgConf-mmorph-1.0402724286593209441.9
+Installing library in
+/home/prashant/Dropbox/MPL_June/MPL/Final/.cabal-sandbox/lib/x86_64-linux-ghc-7.10.3/mmorph-1.0.9-6aQvrV705WGJrL46LAn1a7
+Registering mmorph-1.0.9...

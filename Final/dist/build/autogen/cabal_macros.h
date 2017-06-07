@@ -42,12 +42,12 @@
   (major1) == 2 && (major2) <  2 || \
   (major1) == 2 && (major2) == 2 && (minor) <= 1)
 
-/* package network-2.6.2.1 */
-#define VERSION_network "2.6.2.1"
+/* package network-2.6.3.1 */
+#define VERSION_network "2.6.3.1"
 #define MIN_VERSION_network(major1,major2,minor) (\
   (major1) <  2 || \
   (major1) == 2 && (major2) <  6 || \
-  (major1) == 2 && (major2) == 6 && (minor) <= 2)
+  (major1) == 2 && (major2) == 6 && (minor) <= 3)
 
 /* package pretty-1.1.2.0 */
 #define VERSION_pretty "1.1.2.0"
@@ -168,5 +168,5 @@
   (major1) == 2 && (major2) <  26 || \
   (major1) == 2 && (major2) == 26 && (minor) <= 0)
 
-#define CURRENT_PACKAGE_KEY "Final_06AKaWBzX8jA1daVGaXhwF"
+#define CURRENT_PACKAGE_KEY "Final_K4ZC2JI1IEA2lgkAPyZlLX"
 
