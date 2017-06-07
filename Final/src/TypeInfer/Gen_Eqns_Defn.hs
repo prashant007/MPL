@@ -107,7 +107,7 @@ takeCareofProcDefns defns = do
                             = package    
                  case mkNewProcDefnsMut defns startNum subsList [] of 
                      Left errormsg  ->
-                         left $ errormsg ++ "\n" ++ show package
+                         left $ errormsg 
                      Right finDefns ->
                          return (finDefns,log,finEqns)                 
                  
@@ -151,7 +151,7 @@ takeCareofProcDefn defn@(ProcessDefn (pname,mfunType,pattProc,posn)) = do
             Left errormsg -> do 
                 let
                    emsg = ["Type error in process <<",show pname, ">> defined ",
-                           printPosn posn, "\n", errormsg,"\n\n",prettyStyle zigStyle procEqns]
+                           printPosn posn, "\n", errormsg]
                            --prettyStyle zigStyle procEqns] 
 
                 left $ concat emsg 
@@ -212,8 +212,8 @@ takeCareofProcDefn defn@(ProcessDefn (pname,mfunType,pattProc,posn)) = do
                               left $ 
                                  concat
                                   [
-                                   emsg,"\n",
-                                   "Expected Type :: " ++ show fnStrType,"\n",
+                                   emsg,
+                                   "Expected Type :: " ++ show fnStrType,"\n\n",
                                    "Given Type    :: " ++ show mfunType
                                   ]      
 

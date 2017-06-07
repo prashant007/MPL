@@ -101,7 +101,6 @@ main = do
                   astMPL   = evalState (transMPL  pTree) []
                   preP_MPL = preprocessBefTyping astMPL
 
-                putStrLn $ prettyStyle zigStyle preP_MPL
                 case typeMPL preP_MPL of 
                    Left emsg -> do 
                      putStrLn emsg 
@@ -110,9 +109,10 @@ main = do
                      let 
                        msg  = "Do you want to see the types?"
                        msgF = unlines 
-                                [equalS,equalS,msg,equalS,equalS]
+                                [equalS,equalS,msg]
+                     putStrLn msgF
                      bool <- getChoice
-                     printMsg (msgF ++ typemsg) Nothing bool
+                     printMsg typemsg Nothing bool
                      let 
                        finMPL_AST = pattCompile preP_MPL
                      case finMPL_AST of 
@@ -120,9 +120,7 @@ main = do
                           putStrLn $ unlines 
                             [equalS,equalS,mplEmsg,equalS,equalS]
 
-                       Right fMPL  -> do
-                          putStrLn $ prettyStyle zigStyle fMPL
-                          
+                       Right fMPL  -> do                          
                           let 
                             astCMPL   = convMPL fMPL
 
@@ -131,11 +129,8 @@ main = do
                             astAMPL   = SA.transAMPLCODE ptreeAMPL
                           
                             mach      = CALL.compile_all astAMPL
-                          putStrLn $ prettyStyle zigStyle astAMPL
-                          putStrLn ampl_prog
                           ans <- evalStateT (AM.run_cm' mach) (Map.empty)
-                          let ans' = prettyStyle zigStyle ans 
-                          putStrLn ans' 
+                          return () 
 
 
 printMsg :: String -> Maybe String ->  Bool -> IO ()

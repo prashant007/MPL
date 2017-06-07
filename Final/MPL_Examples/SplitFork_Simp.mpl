@@ -16,6 +16,7 @@ proc p1 :: | Console (A) => Put(A|TopBot) (+) Put(A|TopBot), IntTerm(A) =
         get x on intTerm1
         split ch into ch1,ch2
         put x on ch1
+        --get y on ch1
         put x on ch2
         close ch1
         close ch2
@@ -37,6 +38,7 @@ proc p21 =
 proc p22 =
     | ch2 => intTerm3 -> do   
        get x on ch2
+       --get y on ch2
        hput PutInt on intTerm3
        put x*x*x on intTerm3
        hput Close on intTerm3
