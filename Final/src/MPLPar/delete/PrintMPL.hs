@@ -155,10 +155,6 @@ instance Print TokIf where
   prt _ (TokIf (_,i)) = doc (showString ( i))
 
 
-instance Print TokLet where
-  prt _ (TokLet (_,i)) = doc (showString ( i))
-
-
 instance Print TokFold where
   prt _ (TokFold (_,i)) = doc (showString ( i))
 
@@ -433,6 +429,7 @@ instance Print Pattern where
 instance Print Term where
   prt i e = case e of
     LISTTERM2 term1 term2 -> prPrec i 0 (concatD [prt 1 term1, doc (showString ":"), prt 0 term2])
+    LETTERM term letwheres -> prPrec i 0 (concatD [prt 1 term, doc (showString "where"), doc (showString "{"), prt 0 letwheres, doc (showString "}")])
     Infix0TERM term1 infixop term2 -> prPrec i 1 (concatD [prt 1 term1, prt 0 infixop, prt 2 term2])
     Infix1TERM term1 infixop term2 -> prPrec i 2 (concatD [prt 2 term1, prt 0 infixop, prt 3 term2])
     Infix2TERM term1 infixop term2 -> prPrec i 3 (concatD [prt 3 term1, prt 0 infixop, prt 4 term2])
@@ -442,7 +439,6 @@ instance Print Term where
     Infix6TERM term1 infixop term2 -> prPrec i 7 (concatD [prt 8 term1, prt 0 infixop, prt 7 term2])
     Infix7TERM term1 infixop term2 -> prPrec i 8 (concatD [prt 8 term1, prt 0 infixop, prt 9 term2])
     LISTTERM toksbro terms toksbrc -> prPrec i 9 (concatD [prt 0 toksbro, prt 0 terms, prt 0 toksbrc])
-    LETTERM toklet term letwheres -> prPrec i 9 (concatD [prt 0 toklet, prt 0 term, doc (showString "where"), doc (showString "{"), prt 0 letwheres, doc (showString "}")])
     VARTERM pident -> prPrec i 9 (concatD [prt 0 pident])
     CONSTTERM constanttype -> prPrec i 9 (concatD [prt 0 constanttype])
     IFTERM tokif term1 term2 term3 -> prPrec i 9 (concatD [prt 0 tokif, prt 0 term1, doc (showString "then"), prt 0 term2, doc (showString "else"), doc (showString "{"), prt 0 term3, doc (showString "}")])

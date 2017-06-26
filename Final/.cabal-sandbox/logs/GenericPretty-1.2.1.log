@@ -68,7 +68,7 @@ Text/PrettyPrint/GenericPretty.hs:445:1: Warning: Tab character
 Text/PrettyPrint/GenericPretty.hs:452:1: Warning: Tab character
 In-place registering GenericPretty-1.2.1...
 Creating package registration file:
-/tmp/pkgConf-GenericPretty-1.26281750111656478042.1
+/tmp/pkgConf-GenericPretty-1.21315634022635723058.1
 Installing library in
 /home/prashant/Dropbox/MPL_June/MPL/Final/.cabal-sandbox/lib/x86_64-linux-ghc-7.10.3/GenericPretty-1.2.1-KdOq5qgnBES4fQvQfNNPze
 Registering GenericPretty-1.2.1...

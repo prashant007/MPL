@@ -100,7 +100,7 @@ main = do
                 let 
                   astMPL   = evalState (transMPL  pTree) []
                   preP_MPL = preprocessBefTyping astMPL
-
+                putStrLn $ prettyStyle zigStyle preP_MPL
                 case typeMPL preP_MPL of 
                    Left emsg -> do 
                      putStrLn emsg 

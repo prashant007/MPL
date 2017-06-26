@@ -22,7 +22,6 @@ position token TokFun {"fun"} ;
 position token TokDefault {"default"} ;
 position token TokRecord  {"record"} ;
 position token TokIf  {"if"}  ;
-position token TokLet {"let"} ;  
 position token TokFold {"fold"};
 position token TokUnfold {"unfold"};
 position token TokCase   {"case"} ; 
@@ -52,7 +51,7 @@ token Infix6op ('^') ;
 token Infix7op ({"!!"}) ;
 
 
-layout "=", "of", "where", "as", "let",
+layout "=", "of", "where", "as",
        "from" ,"do" ,"switch","plug","else" ;
 
 MPLPROG. MPL ::= [MPLstmt] RUNstmt ;
@@ -252,6 +251,8 @@ _               .Pattern1  ::= "(" Pattern ")" ;
 
 LISTTERM2 .Term   ::= Term1 ":" Term ;
 _         .Term   ::= Term1 ; 
+LETTERM   .Term   ::= Term1 "where" "{" [LetWhere] "}"; 
+
 
 -- InfixTerm term1 infixrem term2
 
@@ -281,7 +282,6 @@ Infix7TERM. Term8  ::= Term8 Infix7op Term9 ;
 _         . Term8  ::= Term9 ;
 
 LISTTERM  .Term9    ::= TokSBrO [Term] TokSBrC ;
-LETTERM   .Term9    ::= TokLet Term "where" "{" [LetWhere] "}"; 
 VARTERM   .Term9    ::= PIdent ;
 CONSTTERM .Term9    ::= ConstantType ;
 IFTERM    .Term9    ::= TokIf Term "then" Term "else" "{" Term "}" ;

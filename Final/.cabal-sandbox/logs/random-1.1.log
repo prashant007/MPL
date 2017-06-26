@@ -127,7 +127,8 @@ System/Random.hs:527:1: Warning: Tab character
 
 System/Random.hs:528:1: Warning: Tab character
 In-place registering random-1.1...
-Creating package registration file: /tmp/pkgConf-random-15726603361159126505.1
+Creating package registration file:
+/tmp/pkgConf-random-111006613131433925857.1
 Installing library in
 /home/prashant/Dropbox/MPL_June/MPL/Final/.cabal-sandbox/lib/x86_64-linux-ghc-7.10.3/random-1.1-9Kgekc9yEaLHLNUuw6paWL
 Registering random-1.1...

@@ -48,7 +48,6 @@ f u n { tok (\p s -> PT p (eitherResIdent (T_TokFun . share) s)) }
 d e f a u l t { tok (\p s -> PT p (eitherResIdent (T_TokDefault . share) s)) }
 r e c o r d { tok (\p s -> PT p (eitherResIdent (T_TokRecord . share) s)) }
 i f { tok (\p s -> PT p (eitherResIdent (T_TokIf . share) s)) }
-l e t { tok (\p s -> PT p (eitherResIdent (T_TokLet . share) s)) }
 f o l d { tok (\p s -> PT p (eitherResIdent (T_TokFold . share) s)) }
 u n f o l d { tok (\p s -> PT p (eitherResIdent (T_TokUnfold . share) s)) }
 c a s e { tok (\p s -> PT p (eitherResIdent (T_TokCase . share) s)) }
@@ -114,7 +113,6 @@ data Tok =
  | T_TokDefault !String
  | T_TokRecord !String
  | T_TokIf !String
- | T_TokLet !String
  | T_TokFold !String
  | T_TokUnfold !String
  | T_TokCase !String
@@ -192,7 +190,6 @@ prToken t = case t of
   PT _ (T_TokDefault s) -> s
   PT _ (T_TokRecord s) -> s
   PT _ (T_TokIf s) -> s
-  PT _ (T_TokLet s) -> s
   PT _ (T_TokFold s) -> s
   PT _ (T_TokUnfold s) -> s
   PT _ (T_TokCase s) -> s

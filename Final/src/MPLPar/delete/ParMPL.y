@@ -156,7 +156,6 @@ L_TokFun { PT _ (T_TokFun _) }
 L_TokDefault { PT _ (T_TokDefault _) }
 L_TokRecord { PT _ (T_TokRecord _) }
 L_TokIf { PT _ (T_TokIf _) }
-L_TokLet { PT _ (T_TokLet _) }
 L_TokFold { PT _ (T_TokFold _) }
 L_TokUnfold { PT _ (T_TokUnfold _) }
 L_TokCase { PT _ (T_TokCase _) }
@@ -207,7 +206,6 @@ TokFun    :: { TokFun} : L_TokFun { TokFun (mkPosToken $1)}
 TokDefault    :: { TokDefault} : L_TokDefault { TokDefault (mkPosToken $1)}
 TokRecord    :: { TokRecord} : L_TokRecord { TokRecord (mkPosToken $1)}
 TokIf    :: { TokIf} : L_TokIf { TokIf (mkPosToken $1)}
-TokLet    :: { TokLet} : L_TokLet { TokLet (mkPosToken $1)}
 TokFold    :: { TokFold} : L_TokFold { TokFold (mkPosToken $1)}
 TokUnfold    :: { TokUnfold} : L_TokUnfold { TokUnfold (mkPosToken $1)}
 TokCase    :: { TokCase} : L_TokCase { TokCase (mkPosToken $1)}
@@ -405,7 +403,9 @@ Pattern1 : UIdent '(' ListPattern ')' { AbsMPL.CONSPATTERN $1 $3 }
          | TokDCare { AbsMPL.NULLPATTERN $1 }
          | '(' Pattern ')' { $2 }
 Term :: { Term }
-Term : Term1 ':' Term { AbsMPL.LISTTERM2 $1 $3 } | Term1 { $1 }
+Term : Term1 ':' Term { AbsMPL.LISTTERM2 $1 $3 }
+     | Term1 { $1 }
+     | Term1 'where' '{' ListLetWhere '}' { AbsMPL.LETTERM $1 $4 }
 Term1 :: { Term }
 Term1 : Term1 Infix0op Term2 { AbsMPL.Infix0TERM $1 $2 $3 }
       | Term2 { $1 }
@@ -432,7 +432,6 @@ Term8 : Term8 Infix7op Term9 { AbsMPL.Infix7TERM $1 $2 $3 }
       | Term9 { $1 }
 Term9 :: { Term }
 Term9 : TokSBrO ListTerm TokSBrC { AbsMPL.LISTTERM $1 $2 $3 }
-      | TokLet Term 'where' '{' ListLetWhere '}' { AbsMPL.LETTERM $1 $2 $5 }
       | PIdent { AbsMPL.VARTERM $1 }
       | ConstantType { AbsMPL.CONSTTERM $1 }
       | TokIf Term 'then' Term 'else' '{' Term '}' { AbsMPL.IFTERM $1 $2 $4 $7 }

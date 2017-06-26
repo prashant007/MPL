@@ -14,7 +14,7 @@ topLayout :: Bool
 topLayout = False
 
 layoutWords, layoutStopWords :: [String]
-layoutWords     = ["=","of","where","as","let","from","do","switch","plug","else"]
+layoutWords     = ["=","of","where","as","from","do","switch","plug","else"]
 layoutStopWords = []
 
 -- layout separators

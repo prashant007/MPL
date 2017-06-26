@@ -49,7 +49,7 @@ src/Control/Monad/Morph.hs:235:30: Warning:
 [2 of 2] Compiling Control.Monad.Trans.Compose ( src/Control/Monad/Trans/Compose.hs, dist/dist-sandbox-745e76b6/build/Control/Monad/Trans/Compose.o )
 In-place registering mmorph-1.0.9...
 Creating package registration file:
-/tmp/pkgConf-mmorph-1.0402724286593209441.9
+/tmp/pkgConf-mmorph-1.01687926652660260756.9
 Installing library in
 /home/prashant/Dropbox/MPL_June/MPL/Final/.cabal-sandbox/lib/x86_64-linux-ghc-7.10.3/mmorph-1.0.9-6aQvrV705WGJrL46LAn1a7
 Registering mmorph-1.0.9...

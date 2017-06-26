@@ -134,6 +134,7 @@ import ErrM
   '|=|' { PT _ (TS _ 33) }
   '}' { PT _ (TS _ 34) }
 
+L_quoted { PT _ (TL $$) }
 L_charac { PT _ (TC $$) }
 L_doubl  { PT _ (TD $$) }
 L_TokUnit { PT _ (T_TokUnit _) }
@@ -169,7 +170,6 @@ L_TokHPut { PT _ (T_TokHPut _) }
 L_TokSplit { PT _ (T_TokSplit _) }
 L_TokFork { PT _ (T_TokFork _) }
 L_TokDCare { PT _ (T_TokDCare _) }
-L_TokString { PT _ (T_TokString _) }
 L_UIdent { PT _ (T_UIdent _) }
 L_PIdent { PT _ (T_PIdent _) }
 L_PInteger { PT _ (T_PInteger _) }
@@ -185,6 +185,7 @@ L_Infix7op { PT _ (T_Infix7op $$) }
 
 %%
 
+String  :: { String }  : L_quoted {  $1 }
 Char    :: { Char }    : L_charac { (read ( $1)) :: Char }
 Double  :: { Double }  : L_doubl  { (read ( $1)) :: Double }
 TokUnit    :: { TokUnit} : L_TokUnit { TokUnit (mkPosToken $1)}
@@ -220,7 +221,6 @@ TokHPut    :: { TokHPut} : L_TokHPut { TokHPut (mkPosToken $1)}
 TokSplit    :: { TokSplit} : L_TokSplit { TokSplit (mkPosToken $1)}
 TokFork    :: { TokFork} : L_TokFork { TokFork (mkPosToken $1)}
 TokDCare    :: { TokDCare} : L_TokDCare { TokDCare (mkPosToken $1)}
-TokString    :: { TokString} : L_TokString { TokString (mkPosToken $1)}
 UIdent    :: { UIdent} : L_UIdent { UIdent (mkPosToken $1)}
 PIdent    :: { PIdent} : L_PIdent { PIdent (mkPosToken $1)}
 PInteger    :: { PInteger} : L_PInteger { PInteger (mkPosToken $1)}
@@ -400,7 +400,7 @@ Pattern1 : UIdent '(' ListPattern ')' { AbsMPL.CONSPATTERN $1 $3 }
          | TokSBrO ListPattern TokSBrC { AbsMPL.LISTPATTERN1 $1 $2 $3 }
          | '<' ListPattern '>' { AbsMPL.PRODPATTERN $2 }
          | PIdent { AbsMPL.VARPATTERN $1 }
-         | TokString { AbsMPL.STR_CONSTPATTERN $1 }
+         | String { AbsMPL.STR_CONSTPATTERN $1 }
          | PInteger { AbsMPL.INT_CONSTPATTERN $1 }
          | TokDCare { AbsMPL.NULLPATTERN $1 }
          | '(' Pattern ')' { $2 }
@@ -468,7 +468,7 @@ ListTerm : {- empty -} { [] }
          | Term ',' ListTerm { (:) $1 $3 }
 ConstantType :: { ConstantType }
 ConstantType : PInteger { AbsMPL.INTEGER $1 }
-             | TokString { AbsMPL.STRING $1 }
+             | String { AbsMPL.STRING $1 }
              | Char { AbsMPL.CHAR $1 }
              | Double { AbsMPL.DOUBLE $1 }
 RecordEntryAlt :: { RecordEntryAlt }

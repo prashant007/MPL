@@ -66,9 +66,6 @@ transTokRecord x = case x of
 transTokIf :: TokIf -> Result
 transTokIf x = case x of
   TokIf string -> failure x
-transTokLet :: TokLet -> Result
-transTokLet x = case x of
-  TokLet string -> failure x
 transTokFold :: TokFold -> Result
 transTokFold x = case x of
   TokFold string -> failure x
@@ -256,6 +253,7 @@ transPattern x = case x of
 transTerm :: Term -> Result
 transTerm x = case x of
   LISTTERM2 term1 term2 -> failure x
+  LETTERM term letwheres -> failure x
   Infix0TERM term1 infixop term2 -> failure x
   Infix1TERM term1 infixop term2 -> failure x
   Infix2TERM term1 infixop term2 -> failure x
@@ -265,7 +263,6 @@ transTerm x = case x of
   Infix6TERM term1 infixop term2 -> failure x
   Infix7TERM term1 infixop term2 -> failure x
   LISTTERM toksbro terms toksbrc -> failure x
-  LETTERM toklet term letwheres -> failure x
   VARTERM pident -> failure x
   CONSTTERM constanttype -> failure x
   IFTERM tokif term1 term2 term3 -> failure x

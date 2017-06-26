@@ -34,7 +34,7 @@ src/Control/Monad/Trans/Either.hs:59:1: Warning:
     To import instances alone, use: import Data.Traversable()
 In-place registering either-4.4.1.1...
 Creating package registration file:
-/tmp/pkgConf-either-4.4.119399644432112255763.1
+/tmp/pkgConf-either-4.4.112390360291884661237.1
 Installing library in
 /home/prashant/Dropbox/MPL_June/MPL/Final/.cabal-sandbox/lib/x86_64-linux-ghc-7.10.3/either-4.4.1.1-9HOrBGKF8tiARHvPsa9MEM
 Registering either-4.4.1.1...

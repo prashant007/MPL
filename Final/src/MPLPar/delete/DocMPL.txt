@@ -71,7 +71,6 @@ followed by an unsigned or negative exponent.
 
 
 
-
 TokUnit literals are recognized by the regular expression
 `````'(' ')'`````
 
@@ -128,9 +127,6 @@ TokRecord literals are recognized by the regular expression
 
 TokIf literals are recognized by the regular expression
 `````{"if"}`````
-
-TokLet literals are recognized by the regular expression
-`````{"let"}`````
 
 TokFold literals are recognized by the regular expression
 `````{"fold"}`````
@@ -354,6 +350,7 @@ All other symbols are terminals.
   |  |  **|**  | ``(`` //Pattern// ``)`` 
   | //Term// | -> | //Term1// ``:`` //Term// 
   |  |  **|**  | //Term1// 
+  |  |  **|**  | //Term1// ``where`` ``{`` //[LetWhere]// ``}`` 
   | //Term1// | -> | //Term1// //Infix0op// //Term2// 
   |  |  **|**  | //Term2// 
   | //Term2// | -> | //Term2// //Infix1op// //Term3// 
@@ -371,7 +368,6 @@ All other symbols are terminals.
   | //Term8// | -> | //Term8// //Infix7op// //Term9// 
   |  |  **|**  | //Term9// 
   | //Term9// | -> | //TokSBrO// //[Term]// //TokSBrC// 
-  |  |  **|**  | //TokLet// //Term// ``where`` ``{`` //[LetWhere]// ``}`` 
   |  |  **|**  | //PIdent// 
   |  |  **|**  | //ConstantType// 
   |  |  **|**  | //TokIf// //Term// ``then`` //Term// ``else`` ``{`` //Term// ``}`` 

@@ -62,6 +62,10 @@ pattTerm_help term
             where
               pattsPosn    = map (\x -> (x,(0,0))) pattTerms
               finCasePatts = map fst (map preproc_pattTerm pattsPosn) 
+
+          TCons (cname,terms,pn) ->
+              TCons (cname,map pattTerm_help terms,pn) 
+
           otherwise ->  
                 term
 

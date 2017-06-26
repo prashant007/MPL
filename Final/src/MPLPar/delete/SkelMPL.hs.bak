@@ -108,9 +108,6 @@ transTokFork x = case x of
 transTokDCare :: TokDCare -> Result
 transTokDCare x = case x of
   TokDCare string -> failure x
-transTokString :: TokString -> Result
-transTokString x = case x of
-  TokString string -> failure x
 transUIdent :: UIdent -> Result
 transUIdent x = case x of
   UIdent string -> failure x
@@ -253,7 +250,7 @@ transPattern x = case x of
   LISTPATTERN1 toksbro patterns toksbrc -> failure x
   PRODPATTERN patterns -> failure x
   VARPATTERN pident -> failure x
-  STR_CONSTPATTERN tokstring -> failure x
+  STR_CONSTPATTERN string -> failure x
   INT_CONSTPATTERN pinteger -> failure x
   NULLPATTERN tokdcare -> failure x
 transTerm :: Term -> Result
@@ -291,7 +288,7 @@ transPattTerm x = case x of
 transConstantType :: ConstantType -> Result
 transConstantType x = case x of
   INTEGER pinteger -> failure x
-  STRING tokstring -> failure x
+  STRING string -> failure x
   CHAR char -> failure x
   DOUBLE double -> failure x
 transRecordEntryAlt :: RecordEntryAlt -> Result

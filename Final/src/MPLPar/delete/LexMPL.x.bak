@@ -62,7 +62,6 @@ h p u t { tok (\p s -> PT p (eitherResIdent (T_TokHPut . share) s)) }
 s p l i t { tok (\p s -> PT p (eitherResIdent (T_TokSplit . share) s)) }
 f o r k { tok (\p s -> PT p (eitherResIdent (T_TokFork . share) s)) }
 \_ { tok (\p s -> PT p (eitherResIdent (T_TokDCare . share) s)) }
-\" $l ($l | $d | \_ | \')* \" { tok (\p s -> PT p (eitherResIdent (T_TokString . share) s)) }
 $c ($l | $d | \_)* { tok (\p s -> PT p (eitherResIdent (T_UIdent . share) s)) }
 $l ($l | $d | \_ | \')* { tok (\p s -> PT p (eitherResIdent (T_PIdent . share) s)) }
 $d + { tok (\p s -> PT p (eitherResIdent (T_PInteger . share) s)) }
@@ -76,7 +75,7 @@ $d + { tok (\p s -> PT p (eitherResIdent (T_PInteger . share) s)) }
 \! \! { tok (\p s -> PT p (eitherResIdent (T_Infix7op . share) s)) }
 
 $l $i*   { tok (\p s -> PT p (eitherResIdent (TV . share) s)) }
-
+\" ([$u # [\" \\ \n]] | (\\ (\" | \\ | \' | n | t)))* \"{ tok (\p s -> PT p (TL $ share $ unescapeInitTail s)) }
 \' ($u # [\' \\] | \\ [\\ \' n t]) \'  { tok (\p s -> PT p (TC $ share s))  }
 
 $d+ \. $d+ (e (\-)? $d+)? { tok (\p s -> PT p (TD $ share s)) }
@@ -129,7 +128,6 @@ data Tok =
  | T_TokSplit !String
  | T_TokFork !String
  | T_TokDCare !String
- | T_TokString !String
  | T_UIdent !String
  | T_PIdent !String
  | T_PInteger !String
@@ -208,7 +206,6 @@ prToken t = case t of
   PT _ (T_TokSplit s) -> s
   PT _ (T_TokFork s) -> s
   PT _ (T_TokDCare s) -> s
-  PT _ (T_TokString s) -> s
   PT _ (T_UIdent s) -> s
   PT _ (T_PIdent s) -> s
   PT _ (T_PInteger s) -> s

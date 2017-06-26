@@ -38,18 +38,16 @@ fun reverse :: [A] -> [A] =
 fun stringify_H :: [Int] -> [Char] = 
    []    -> [] 
    [x]   -> unstring(toStr(x))
-   x:xs -> let 
-            append(putComma,stringify_H(xs))
-           where
-            charRep = unstring(toStr(x)) 
-            putComma= append (charRep,[','])
+   x:xs  -> append(putComma,stringify_H(xs))
+     where
+       charRep = unstring(toStr(x)) 
+       putComma= append (charRep,[','])
 
 fun stringify :: [Int] -> [Char] =
-  iList  -> let 
-              '[':remList
-            where
-              chList  = stringify_H (iList)
-              remList = append (chList,unstring("]\n\n"))
+  iList  -> '[':remList
+      where
+        chList  = stringify_H (iList)
+        remList = append (stringify_H (iList),unstring("]\n\n"))
 
 fun aListHelp :: [[Int]] -> [Int] = 
    []     -> []
@@ -57,10 +55,10 @@ fun aListHelp :: [[Int]] -> [Int] =
 
 
 fun appendList :: [[Int]] -> [Int] = 
-  list -> let 
-             aListHelp (rlist)
-          where
-             rlist = reverse (list)
+  list -> 
+      aListHelp (rlist)
+    where
+      rlist = reverse (list)
 
 
 

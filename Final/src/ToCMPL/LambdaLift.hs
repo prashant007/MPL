@@ -158,7 +158,11 @@ handle_LetWhr :: [LetWhere] -> Term -> (Term,[Defn])
 handle_LetWhr lwhrs term 
       = lam_lift_whrDens defns term 
   where 
-    defns  = map (\(LetDefn d) -> d) lwhrs 
+    --defns  = map (\(LetDefn d) -> d) lwhrs 
+    defns = map someFun lwhrs 
+    someFun :: LetWhere -> Defn 
+    someFun (LetDefn d) = d 
+    someFun (LetPatt sthg) = error $ "\n\n" ++ show sthg ++ "\n\n"
 
 -- ===================================================================
 

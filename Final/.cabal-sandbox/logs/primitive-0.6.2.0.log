@@ -34,7 +34,7 @@ Control/Monad/Primitive.hs:110:19: Warning:
 [12 of 12] Compiling Data.Primitive.UnliftedArray ( Data/Primitive/UnliftedArray.hs, dist/dist-sandbox-745e76b6/build/Data/Primitive/UnliftedArray.o )
 In-place registering primitive-0.6.2.0...
 Creating package registration file:
-/tmp/pkgConf-primitive-0.6.29398195822001100545.0
+/tmp/pkgConf-primitive-0.6.25117023052084420925.0
 Installing library in
 /home/prashant/Dropbox/MPL_June/MPL/Final/.cabal-sandbox/lib/x86_64-linux-ghc-7.10.3/primitive-0.6.2.0-DEGPIkJ9OVL85E6gKv6dxz
 Registering primitive-0.6.2.0...

@@ -27,7 +27,7 @@ src/Control/Monad/Free/TH.hs:217:1: Warning:
 [16 of 16] Compiling Control.Applicative.Free ( src/Control/Applicative/Free.hs, dist/dist-sandbox-745e76b6/build/Control/Applicative/Free.o )
 In-place registering free-4.12.4...
 Creating package registration file:
-/tmp/pkgConf-free-4.1217893661431987231011.4
+/tmp/pkgConf-free-4.121476153275213975407.4
 Installing library in
 /home/prashant/Dropbox/MPL_June/MPL/Final/.cabal-sandbox/lib/x86_64-linux-ghc-7.10.3/free-4.12.4-BLtD3fvdN9gDBjUSLXxyBp
 Registering free-4.12.4...

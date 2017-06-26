@@ -45,8 +45,6 @@ newtype TokRecord = TokRecord ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 newtype TokIf = TokIf ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
-newtype TokLet = TokLet ((Int,Int),String)
-  deriving (Eq, Ord, Show, Read)
 newtype TokFold = TokFold ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 newtype TokUnfold = TokUnfold ((Int,Int),String)
@@ -211,6 +209,7 @@ data Pattern
 
 data Term
     = LISTTERM2 Term Term
+    | LETTERM Term [LetWhere]
     | Infix0TERM Term Infix0op Term
     | Infix1TERM Term Infix1op Term
     | Infix2TERM Term Infix2op Term
@@ -220,7 +219,6 @@ data Term
     | Infix6TERM Term Infix6op Term
     | Infix7TERM Term Infix7op Term
     | LISTTERM TokSBrO [Term] TokSBrC
-    | LETTERM TokLet Term [LetWhere]
     | VARTERM PIdent
     | CONSTTERM ConstantType
     | IFTERM TokIf Term Term Term

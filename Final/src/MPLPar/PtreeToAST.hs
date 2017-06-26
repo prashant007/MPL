@@ -82,10 +82,6 @@ transTokRecord :: TokRecord -> M.PosnPair
 transTokRecord x = case x of
   TokRecord string -> fst string
 
-transTokLet :: TokLet -> M.PosnPair
-transTokLet x = case x of
-  TokLet string -> fst string
-
 transTokIf :: TokIf -> M.PosnPair
 transTokIf x = case x of
   TokIf string -> fst string
@@ -1501,10 +1497,10 @@ transTerm x = case x of
                 tPosn  = E.getTermPosn tTerm
               return $ M.TCons ("Cons",[tTerm,tRest],tPosn)
          
-  LETTERM toklet term lwheres -> do 
+  LETTERM term lwheres -> do 
       tletwhrs <- mapM transLetWhere lwheres 
       tTerm    <- transTerm term
-      return $ M.TLet (tTerm,tletwhrs,transTokLet toklet)
+      return $ M.TLet (tTerm,tletwhrs,E.getTermPosn tTerm)
 
   VARTERM pident -> do 
       list <- get 

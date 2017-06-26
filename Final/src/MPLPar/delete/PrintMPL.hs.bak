@@ -211,10 +211,6 @@ instance Print TokDCare where
   prt _ (TokDCare (_,i)) = doc (showString ( i))
 
 
-instance Print TokString where
-  prt _ (TokString (_,i)) = doc (showString ( i))
-
-
 instance Print UIdent where
   prt _ (UIdent (_,i)) = doc (showString ( i))
   prtList _ [] = (concatD [])
@@ -428,7 +424,7 @@ instance Print Pattern where
     LISTPATTERN1 toksbro patterns toksbrc -> prPrec i 1 (concatD [prt 0 toksbro, prt 0 patterns, prt 0 toksbrc])
     PRODPATTERN patterns -> prPrec i 1 (concatD [doc (showString "<"), prt 0 patterns, doc (showString ">")])
     VARPATTERN pident -> prPrec i 1 (concatD [prt 0 pident])
-    STR_CONSTPATTERN tokstring -> prPrec i 1 (concatD [prt 0 tokstring])
+    STR_CONSTPATTERN str -> prPrec i 1 (concatD [prt 0 str])
     INT_CONSTPATTERN pinteger -> prPrec i 1 (concatD [prt 0 pinteger])
     NULLPATTERN tokdcare -> prPrec i 1 (concatD [prt 0 tokdcare])
   prtList _ [] = (concatD [])
@@ -475,7 +471,7 @@ instance Print PattTerm where
 instance Print ConstantType where
   prt i e = case e of
     INTEGER pinteger -> prPrec i 0 (concatD [prt 0 pinteger])
-    STRING tokstring -> prPrec i 0 (concatD [prt 0 tokstring])
+    STRING str -> prPrec i 0 (concatD [prt 0 str])
     CHAR c -> prPrec i 0 (concatD [prt 0 c])
     DOUBLE d -> prPrec i 0 (concatD [prt 0 d])
 

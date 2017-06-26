@@ -12,7 +12,7 @@ Data/Hashable/Generic.hs:21:1: Warning:
 [4 of 4] Compiling Data.Hashable    ( Data/Hashable.hs, dist/dist-sandbox-745e76b6/build/Data/Hashable.o )
 In-place registering hashable-1.2.6.0...
 Creating package registration file:
-/tmp/pkgConf-hashable-1.2.63272545861572276965.0
+/tmp/pkgConf-hashable-1.2.6631704567498777856.0
 Installing library in
 /home/prashant/Dropbox/MPL_June/MPL/Final/.cabal-sandbox/lib/x86_64-linux-ghc-7.10.3/hashable-1.2.6.0-LK431V1chduCrAl59wyztr
 Registering hashable-1.2.6.0...
